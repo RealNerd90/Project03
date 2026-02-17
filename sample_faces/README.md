@@ -1,13 +1,25 @@
 # Sample Faces Directory
 
-This directory should contain reference face images for your face recognition database.
+This directory contains the reference face images used as the recognition database.
 
 ## Instructions
 
-1. Add clear, front-facing photos of people you want to recognize
-2. Name each file with the person's name (e.g., `John_Doe.jpg`, `Jane_Smith.png`)
-3. Use one face per image for best results
-4. Supported formats: JPG, JPEG, PNG, BMP
+### Recommended structure (current)
+
+Create **one folder per student** and store multiple angle images inside it:
+
+```
+sample_faces/
+  Amar/
+    left.jpg
+    right.jpg
+    up.jpg
+    down.jpg
+    front.jpg   (optional)
+```
+
+The app will also accept filenames like `Amar_left.jpg` inside the student folder, as long as the name contains:
+`left`, `right`, `up`, `down`, or `front`.
 
 ## Tips for Best Results
 
@@ -15,16 +27,22 @@ This directory should contain reference face images for your face recognition da
 - Face should be clearly visible and preferably looking at the camera
 - Avoid heavy shadows or occlusions
 - Higher resolution images work better
-- Multiple photos of the same person can improve accuracy (use `PersonName_1.jpg`, `PersonName_2.jpg`, etc.)
+- Multiple angles of the same person improve accuracy (left/right/up/down)
 
 ## Example Structure
 
 ```
 sample_faces/
-├── Alice_Johnson.jpg
-├── Bob_Smith.jpg
-├── Charlie_Brown.png
-└── Diana_Prince.jpg
+├── Amar/
+│   ├── left.jpg
+│   ├── right.jpg
+│   ├── up.jpg
+│   └── down.jpg
+└── Binod/
+    ├── left.jpg
+    ├── right.jpg
+    ├── up.jpg
+    └── down.jpg
 ```
 
-Once you've added your reference images, run the demo script to build the face database!
+Once you've added your reference images, run `attendance_system.py` to load/build the database.
