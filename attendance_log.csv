@@ -1,37 +1,64 @@
-Name,Date,Time
-Amartya,2026-02-10,23:24:43
-Amartya,2026-02-10,23:42:26
-Amartya,2026-02-11,00:36:57
-Amartya,2026-02-11,00:47:24
-Rosy,2026-02-12,18:49:55
-Vishal,2026-02-12,23:44:22
-Aditya,2026-02-13,23:52:47
-Arindom,2026-02-13,23:54:57
-Aditya,2026-02-14,23:45:56
-Mika,2026-02-14,23:46:27
-Rosy,2026-02-14,23:46:50
-Arindom,2026-02-14,23:47:08
-Amartya,2026-02-14,23:54:09
-Amartya,2026-02-15,00:08:27
-Amartya,2026-02-15,12:36:37
-Amartya,2026-02-15,12:36:58
-Riya,2026-02-15,12:41:55
-Riya,2026-02-15,12:43:29
-Jenita,2026-02-15,12:44:30
-Amartya,2026-02-17,13:21:38
-Amartya,2026-02-17,13:22:01
-Amartya,2026-02-17,13:22:32
-Amartya,2026-02-17,13:22:46
-Amartya,2026-02-17,13:27:08
-Amartya,2026-02-17,14:23:50
-Binod,2026-02-17,14:25:07
-Binod,2026-02-17,14:25:20
-Amar,2026-02-17,15:17:16
-Amar,2026-02-17,15:17:38
-Amar,2026-02-17,15:17:49
-Amar,2026-02-17,15:18:02
-Amar,2026-02-17,15:36:48
-Amar,2026-02-17,15:56:54
-Amar,2026-02-17,15:57:11
-Amartya,2026-02-17,16:14:14
-Amartya,2026-02-17,16:14:21
+Name,Date,Time,Attendance
+Amartya,2026-02-10,23:24:43,present
+Amartya,2026-02-10,23:42:26,present
+Amartya,2026-02-11,00:36:57,present
+Amartya,2026-02-11,00:47:24,present
+Rosy,2026-02-12,18:49:55,present
+Vishal,2026-02-12,23:44:22,present
+Aditya,2026-02-13,23:52:47,present
+Arindom,2026-02-13,23:54:57,present
+Aditya,2026-02-14,23:45:56,present
+Mika,2026-02-14,23:46:27,present
+Rosy,2026-02-14,23:46:50,present
+Arindom,2026-02-14,23:47:08,present
+Amartya,2026-02-14,23:54:09,present
+Amartya,2026-02-15,00:08:27,present
+Amartya,2026-02-15,12:36:37,present
+Amartya,2026-02-15,12:36:58,present
+Riya,2026-02-15,12:41:55,present
+Riya,2026-02-15,12:43:29,present
+Jenita,2026-02-15,12:44:30,present
+Amartya,2026-02-17,13:21:38,present
+Amartya,2026-02-17,13:22:01,present
+Amartya,2026-02-17,13:22:32,present
+Amartya,2026-02-17,13:22:46,present
+Amartya,2026-02-17,13:27:08,present
+Amartya,2026-02-17,14:23:50,present
+Binod,2026-02-17,14:25:07,present
+Binod,2026-02-17,14:25:20,present
+Amar,2026-02-17,15:17:16,present
+Amar,2026-02-17,15:17:38,present
+Amar,2026-02-17,15:17:49,present
+Amar,2026-02-17,15:18:02,present
+Amar,2026-02-17,15:36:48,present
+Amar,2026-02-17,15:56:54,present
+Amar,2026-02-17,15:57:11,present
+Amartya,2026-02-17,16:14:14,present
+Amartya,2026-02-17,16:14:21,present
+Amartya,2026-02-19,13:24:20,present
+Amartya,2026-02-19,14:41:00,present
+Amartya,2026-02-19,14:42:00,present
+Amartya,2026-02-19,14:42:24,present
+Amartya,2026-02-19,14:42:37,present
+Amartya,2026-02-19,14:44:21,present
+14.139.218.7,2026-02-19,15:40:20,unknown
+Amartya,2026-02-19,15:40:23,out of radius
+Amartya,2026-02-19,15:40:29,out of radius
+Amartya,2026-02-19,15:40:30,out of radius
+Amartya,2026-02-19,15:40:32,out of radius
+Amartya,2026-02-19,15:40:34,out of radius
+Amartya,2026-02-19,15:40:36,out of radius
+Amartya,2026-02-19,15:40:37,out of radius
+Amartya,2026-02-19,15:40:38,out of radius
+14.139.218.7,2026-02-19,15:40:40,unknown
+Amartya,2026-02-19,15:40:41,out of radius
+Amartya,2026-02-19,15:40:42,out of radius
+Amartya,2026-02-19,15:40:48,out of radius
+Amartya,2026-02-19,15:40:49,out of radius
+Amartya,2026-02-19,15:40:52,out of radius
+Amartya,2026-02-19,15:40:54,out of radius
+14.139.218.7,2026-02-19,15:44:29,unknown
+Amartya,2026-02-19,15:44:53,out of radius
+Amartya,2026-02-19,16:05:32,out of radius
+14.139.218.7,2026-02-19,16:52:19,unknown
+Amartya,2026-02-19,16:52:32,out of radius

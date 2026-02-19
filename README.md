@@ -8,6 +8,7 @@ A Python/OpenCV attendance app that registers students from images or webcam and
 Project03/
 ├── attendance_system.py      # Main application (CLI + webcam UI)
 ├── requirements.txt          # Python dependencies
+├── location_config.json     # Admin: attendance location & radius (auto-created)
 ├── attendance_log.csv        # Output log (auto-created/appended)
 ├── output/                   # Saved annotated results (auto-created)
 └── sample_faces/             # Face database (one folder per student)
@@ -87,6 +88,13 @@ When you run `attendance_system.py`, you’ll see a simple menu:
   - Runs live webcam matching
   - Uses multiple reference images per student
   - Writes to `attendance_log.csv`
+
+- **3. Admin: Set attendance location (radius)**
+  - **Location-based attendance**: students/employees can mark attendance only when their device is within an admin-set radius of a designated location.
+  - Admin sets:
+    - **Center**: latitude and longitude (e.g. office/classroom).
+    - **Radius**: allowed distance in meters (e.g. 100 m).
+  - Current device location is estimated via IP (no API key; internet required). If the user is outside the radius, attendance is **not** recorded and a message is shown.
 
 ## Outputs
 
