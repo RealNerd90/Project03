@@ -9,6 +9,15 @@ import csv
 import json
 import math
 from datetime import datetime, timezone, timedelta
+import asyncio
+import sys
+if sys.platform == "win32":
+    try:
+        from winrt.windows.devices.geolocation import Geolocator, PositionStatus, GeolocationAccessStatus
+        from winrt.windows.foundation import IAsyncOperation
+    except ImportError:
+        print("Could not import Geolocation API. Location check may not work.")
+        Geolocator = None
 
 # ---------------------------------------------------------------------------
 # Location-based attendance (admin-set radius)
@@ -18,8 +27,8 @@ from datetime import datetime, timezone, timedelta
 LOCATION_CONFIG_PATH = "location_config.json"
 DEFAULT_LOCATION_CONFIG = {
     "enabled": True,  # ADMIN: Set to True to enable location-based attendance, False to disable
-    "center_lat": 26.11785301403023,  # ADMIN: Set your office/classroom latitude here
-    "center_lon": 91.81358375833473,  # ADMIN: Set your office/classroom longitude here
+    "center_lat": 26.11800075650252,    # ADMIN: Set your office/classroom latitude here
+    "center_lon": 91.8136276152452,  # ADMIN: Set your office/classroom longitude here
     "radius_meters": 100,  # ADMIN: Set allowed radius in meters (e.g. 100 = 100 meters)
 }
 
@@ -70,33 +79,32 @@ def _haversine_meters(lat1, lon1, lat2, lon2):
     return R * c
 
 
-def _get_current_location_ip():
+async def _get_current_location():
     """
-    Get approximate current location using IP (free, no API key).
+    Get current location using Windows Geolocation API.
     Returns (lat, lon) or (None, None) on failure.
-    Uses short timeout to avoid hanging.
     """
+    if sys.platform != "win32" or Geolocator is None:
+        return _get_current_location_ip()  # Fallback to IP for non-windows
+
     try:
-        import socket
-        from urllib.request import urlopen, Request
-        old_timeout = socket.getdefaulttimeout()
-        socket.setdefaulttimeout(3)
-        try:
-            req = Request("http://ip-api.com/json/?fields=lat,lon", headers={"User-Agent": "AttendanceSystem/1.0"})
-            with urlopen(req, timeout=3) as resp:
-                data = json.loads(resp.read().decode())
-                lat = data.get("lat")
-                lon = data.get("lon")
-                if lat is not None and lon is not None:
-                    return (float(lat), float(lon))
-        finally:
-            socket.setdefaulttimeout(old_timeout)
-    except Exception:
-        pass
-    return (None, None)
+        access_status = await Geolocator.request_access_async()
+        if access_status != GeolocationAccessStatus.ALLOWED:
+            print("⚠️  Location access denied in Windows settings.")
+            return (None, None)
 
+        geolocator = Geolocator()
+        print("🌍 Getting current position... (may take a moment)")
+        position = await geolocator.get_geoposition_async()
+        lat = position.coordinate.latitude
+        lon = position.coordinate.longitude
+        print(f"  -> GPS Location: Lat={lat:.6f}, Lon={lon:.6f} (Accuracy: {position.coordinate.accuracy:.0f}m)")
+        return (float(lat), float(lon))
+    except Exception as e:
+        print(f"⚠️  Could not get GPS location: {e}")
+        return (None, None)
 
-def check_location_allowed():
+async def check_location_allowed():
     """
     If location-based attendance is enabled, check if current device is within
     admin-set radius. Returns (allowed: bool, message: str).
@@ -104,34 +112,13 @@ def check_location_allowed():
     cfg = _load_location_config()
     if not cfg["enabled"]:
         return True, "Location check disabled."
-    lat, lon = _get_current_location_ip()
+    lat, lon = await _get_current_location()
     if lat is None or lon is None:
         return False, "Could not get current location. Check internet or try again."
     dist = _haversine_meters(lat, lon, cfg["center_lat"], cfg["center_lon"])
     if dist <= cfg["radius_meters"]:
         return True, f"Within range ({dist:.0f} m)."
     return False, f"Outside allowed radius ({dist:.0f} m > {cfg['radius_meters']} m)."
-
-def _get_public_ip():
-    """
-    Best-effort public IP (used when logging Unknown attempts).
-    Returns string like '203.0.113.5' or 'UnknownIP' if unavailable.
-    """
-    try:
-        import socket
-        from urllib.request import urlopen, Request
-        old_timeout = socket.getdefaulttimeout()
-        socket.setdefaulttimeout(3)
-        try:
-            req = Request("https://api.ipify.org?format=json", headers={"User-Agent": "AttendanceSystem/1.0"})
-            with urlopen(req, timeout=3) as resp:
-                data = json.loads(resp.read().decode())
-                ip = data.get("ip")
-                return str(ip) if ip else "UnknownIP"
-        finally:
-            socket.setdefaulttimeout(old_timeout)
-    except Exception:
-        return "UnknownIP"
 
 class AttendanceSystem:
     def __init__(self, database_path='sample_faces', threshold=0.6):
@@ -687,7 +674,7 @@ class AttendanceSystem:
         min_val, idx = torch.min(dists, dim=0)
         return self._db_names_flat[int(idx.item())], float(min_val.item())
 
-    def mark_attendance(self, image_path):
+    async def mark_attendance(self, image_path):
         """Mark attendance using largest face detected."""
         # Capture the exact timestamp immediately when attendance is being marked
         # Define IST timezone manually to avoid ZoneInfo issues on Windows
@@ -755,21 +742,13 @@ class AttendanceSystem:
             print(f"  -> Match result: {best_match_name} (Distance: {min_dist:.4f})")
             
             if min_dist < self.threshold:
-                allowed, _ = check_location_allowed()
-                if allowed:
-                    self.record_attendance(best_match_name, attendance_timestamp, "present")
-                    color = "green"
-                    label = f"{best_match_name}"
-                else:
-                    self.record_attendance(best_match_name, attendance_timestamp, "out of radius")
-                    color = "orange"
-                    label = f"{best_match_name} (Out of radius)"
+                await self.log_attendance(best_match_name, attendance_timestamp)
+                color = "green"
+                label = f"{best_match_name}"
             else:
                 color = "orange"
                 label = "Unknown"
                 print("  ⚠️  Identity not recognized.")
-                ip = _get_public_ip()
-                self.record_attendance(ip, attendance_timestamp, "unknown")
 
             # visual - Using OpenCV for reliable drawing
             # Convert PIL to BGR for OpenCV
@@ -813,7 +792,7 @@ class AttendanceSystem:
         except Exception as e:
             print(f"❌ Error processing attendance: {e}")
 
-    def run_live_mode(self, camera_index=0):
+    async def run_live_mode(self, camera_index=0):
         """
         Run the attendance system in live mode.
         - Scans until a face is matched.
@@ -838,18 +817,13 @@ class AttendanceSystem:
         current_match_name = None
         consecutive_match_count = 0
         integrity_threshold = 3  # Require 3 consecutive confirmations
-        unknown_integrity_threshold = 6  # Require longer stability before logging unknown
-        unknown_last_log_time = None
-        unknown_cooldown_seconds = 15
-        unknown_consecutive_count = 0
         
         # UI State
         face_locations = []
         face_names = []
         system_message = "Scanning..."
-        action_trigger = False
-        action_timer_start = None
-        action_label = None  # "present" / "out of radius" / "unknown"
+        success_trigger = False
+        success_timer_start = None
 
         while True:
             ret, frame = cap.read()
@@ -858,7 +832,7 @@ class AttendanceSystem:
                 break
 
             # Process generation
-            if frame_count % process_every_n_frames == 0 and not action_trigger:
+            if frame_count % process_every_n_frames == 0 and not success_trigger:
                 
                 # Pre-processing
                 rgb_small_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
@@ -915,7 +889,6 @@ class AttendanceSystem:
                         
                         # Stability Logic
                         if best_match_name != "Unknown":
-                            unknown_consecutive_count = 0
                             if best_match_name == current_match_name:
                                 consecutive_match_count += 1
                             else:
@@ -925,45 +898,18 @@ class AttendanceSystem:
                             system_message = f"Verifying {current_match_name}... ({consecutive_match_count}/{integrity_threshold})"
                             
                             if consecutive_match_count >= integrity_threshold:
+                                # SUCCESS!
                                 IST = timezone(timedelta(hours=5, minutes=30))
                                 attendance_timestamp = datetime.now(IST)
-                                allowed, loc_msg = check_location_allowed()
-                                if allowed:
-                                    self.record_attendance(current_match_name, attendance_timestamp, "present")
-                                    system_message = f"Done! Attendance Marked: {current_match_name}"
-                                    action_trigger = True
-                                    action_timer_start = datetime.now()
-                                    action_label = "present"
-                                else:
-                                    # Registered user but outside radius: log attempt as out of radius
-                                    self.record_attendance(current_match_name, attendance_timestamp, "out of radius")
-                                    system_message = "Unable to give attendance (out of radius)"
-                                    action_trigger = True
-                                    action_timer_start = datetime.now()
-                                    action_label = "out of radius"
+                                await self.log_attendance(current_match_name, attendance_timestamp)
+                                
+                                system_message = f"Done! Attendance Marked: {current_match_name}"
+                                success_trigger = True
+                                success_timer_start = datetime.now()
                         else:
                             consecutive_match_count = 0
                             current_match_name = None
                             system_message = "Unknown Face"
-                            unknown_consecutive_count += 1
-                            # Log unknown attempts (with cooldown to avoid spamming)
-                            if unknown_consecutive_count >= unknown_integrity_threshold:
-                                now_local = datetime.now()
-                                if (
-                                    unknown_last_log_time is None
-                                    or (now_local - unknown_last_log_time).total_seconds() >= unknown_cooldown_seconds
-                                ):
-                                    IST = timezone(timedelta(hours=5, minutes=30))
-                                    attendance_timestamp = datetime.now(IST)
-                                    ip = _get_public_ip()
-                                    self.record_attendance(ip, attendance_timestamp, "unknown")
-                                    current_match_name = ip
-                                    system_message = "Unknown Face (logged)"
-                                    action_trigger = True
-                                    action_timer_start = datetime.now()
-                                    action_label = "unknown"
-                                    unknown_last_log_time = now_local
-                                unknown_consecutive_count = 0
                             
             frame_count += 1
 
@@ -973,15 +919,9 @@ class AttendanceSystem:
                 
                 color = (0, 0, 255) # Default Red
                 
-                if action_trigger and action_label == "present":
-                    color = (0, 255, 0) # Green on present
+                if success_trigger:
+                    color = (0, 255, 0) # Green on success
                     name = current_match_name # Enforce the matched name
-                elif action_trigger and action_label == "out of radius":
-                    color = (0, 165, 255) # Orange
-                    name = current_match_name
-                elif action_trigger and action_label == "unknown":
-                    color = (0, 0, 255) # Red
-                    name = "Unknown"
                 elif name == "Unknown":
                     color = (0, 0, 255)
                 elif consecutive_match_count > 0:
@@ -1005,9 +945,9 @@ class AttendanceSystem:
             cv2.imshow('Live Marking', frame)
 
             # Auto-Close Logic
-            if action_trigger:
-                if (datetime.now() - action_timer_start).total_seconds() > 1.0: # Faster close (1s)
-                    print(f"✅ Auto-closing after {action_label} for {current_match_name}")
+            if success_trigger:
+                if (datetime.now() - success_timer_start).total_seconds() > 1.0: # Faster close (1s)
+                    print(f"✅ Auto-closing after success for {current_match_name}")
                     break
 
             if cv2.waitKey(1) & 0xFF == ord('q'):
@@ -1016,48 +956,26 @@ class AttendanceSystem:
         cap.release()
         cv2.destroyAllWindows()
 
-    def log_attendance(self, name, timestamp):
-        """Backward-compatible wrapper (kept)."""
-        self.record_attendance(name, timestamp, "present")
-
-    def record_attendance(self, name, timestamp, status):
-        """
-        Write an attendance attempt to CSV with status:
-        - present
-        - out of radius
-        - unknown
-        """
+    async def log_attendance(self, name, timestamp):
+        """Log the attendance to a CSV file. If out of range, log as 'OUT OF RANGE'."""
+        allowed, msg = await check_location_allowed()
         filename = "attendance_log.csv"
         date_str = timestamp.strftime("%Y-%m-%d")
-        time_str = timestamp.strftime("%H:%M:%S")
-
-        # Ensure CSV has the new 4-column header. If old 3-column file exists, upgrade it.
-        if os.path.exists(filename):
-            try:
-                with open(filename, "r", newline="") as rf:
-                    rows = list(csv.reader(rf))
-                if rows and rows[0] == ["Name", "Date", "Time"]:
-                    upgraded = [rows[0] + ["Attendance"]]
-                    for r in rows[1:]:
-                        if len(r) == 3:
-                            upgraded.append(r + ["present"])
-                        elif len(r) >= 4:
-                            upgraded.append(r[:4])
-                        else:
-                            upgraded.append(r)
-                    with open(filename, "w", newline="") as wf:
-                        w = csv.writer(wf)
-                        w.writerows(upgraded)
-            except Exception:
-                pass
+        
+        if not allowed:
+            print(f"❌ Attendance not recorded: {msg}")
+            time_str = "OUT OF RANGE"
+        else:
+            time_str = timestamp.strftime("%H:%M:%S")
+            print(f"📝 Attendance recorded for {name} at {time_str} (Local Time)")
 
         file_exists = os.path.exists(filename)
-        with open(filename, "a", newline="") as f:
+        with open(filename, 'a', newline='') as f:
             writer = csv.writer(f)
             if not file_exists:
-                writer.writerow(["Name", "Date", "Time", "Attendance"])
-            writer.writerow([name, date_str, time_str, status])
-            print(f"📝 Logged: {name} | {date_str} {time_str} | {status}")
+                writer.writerow(["Name", "Date", "Time"])
+            writer.writerow([name, date_str, time_str])
+
 
 # NOTE: admin_set_location() removed from menu - location is now set in code above.
 # This function is kept for future admin interface implementation.
@@ -1066,7 +984,7 @@ class AttendanceSystem:
 #     ...
 
 
-def main():
+async def async_main():
     # Load the full database root so new registrations create their own folder:
     #   sample_faces/<StudentName>/{left,right,up,down}.jpg
     system = AttendanceSystem(database_path="sample_faces")
@@ -1096,11 +1014,13 @@ def main():
         elif choice == '2':
             cam_idx_str = input("Enter Camera Index (default 0): ")
             cam_idx = int(cam_idx_str) if cam_idx_str.strip() else 0
-            system.run_live_mode(cam_idx)
+            await system.run_live_mode(cam_idx)
 
         elif choice == '3':
             break
 
+def main():
+    asyncio.run(async_main())
 
 if __name__ == "__main__":
     main()

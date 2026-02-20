@@ -6,3 +6,5 @@ facenet-pytorch
 opencv-python
 pillow
 matplotlib
+winrt-Windows.Devices.Geolocation
+winrt-Windows.Foundation
