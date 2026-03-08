@@ -86,6 +86,7 @@ async def _get_current_location():
     """
     if sys.platform != "win32" or Geolocator is None:
         return (None, None)
+        return _get_current_location_ip()  # Fallback to IP for non-windows
 
     try:
         access_status = await Geolocator.request_access_async()
@@ -909,6 +910,7 @@ class AttendanceSystem:
                         embedding = self.resnet(face_tensor.to(self.device)).detach()
 
                         # Compare
+                        # Compare (fast, vectorized)
                         best_match_name, min_dist = self._find_best_match(embedding)
                         
                         if min_dist > self.threshold:
@@ -996,6 +998,16 @@ class AttendanceSystem:
             attendance_status = "out of radius"
         else:
             attendance_status = "present"
+        """Log the attendance to a CSV file. If out of range, log as 'OUT OF RANGE'."""
+        allowed, msg = await check_location_allowed()
+        filename = "attendance_log.csv"
+        date_str = timestamp.strftime("%Y-%m-%d")
+        
+        if not allowed:
+            print(f"❌ Attendance not recorded: {msg}")
+            time_str = "OUT OF RANGE"
+        else:
+            time_str = timestamp.strftime("%H:%M:%S")
             print(f"📝 Attendance recorded for {name} at {time_str} (Local Time)")
 
         file_exists = os.path.exists(filename)
@@ -1004,6 +1016,21 @@ class AttendanceSystem:
             if not file_exists:
                 writer.writerow(["Name", "Date", "Time", "Attendance"])
             writer.writerow([name, date_str, time_str, attendance_status])
+
+
+# NOTE: admin_set_location() removed from menu - location is now set in code above.
+# This function is kept for future admin interface implementation.
+# def admin_set_location():
+#     """Let admin set attendance location: center (lat, lon) and radius in meters. Enable/disable check."""
+#     ...
+
+
+async def async_main():
+    # Load the full database root so new registrations create their own folder:
+    #   sample_faces/<StudentName>/{left,right,up,down}.jpg
+    system = AttendanceSystem(database_path="sample_faces")
+    writer.writerow(["Name", "Date", "Time"])
+    writer.writerow([name, date_str, time_str])
 
 
 # NOTE: admin_set_location() removed from menu - location is now set in code above.
@@ -1030,6 +1057,18 @@ async def async_main():
             cam_idx_str = input("Enter Camera Index (default 0): ")
             cam_idx = int(cam_idx_str) if cam_idx_str.strip() else 0
             system.register_from_camera(name, cam_idx)
+            print("  a. Enter Image Path")
+            print("  b. Capture from Camera")
+            reg_choice = input("  Choose method (a/b): ").lower()
+            if reg_choice == 'a':
+                img_path = input("  Enter Image Path: ").strip('"')
+                system.register_student(name, img_path)
+            elif reg_choice == 'b':
+                cam_idx_str = input("  Enter Camera Index (default 0): ")
+                cam_idx = int(cam_idx_str) if cam_idx_str.strip() else 0
+                system.register_from_camera(name, cam_idx)
+            else:
+                print("❌ Invalid choice.")
 
         elif choice == '2':
             cam_idx_str = input("Enter Camera Index (default 0): ")
