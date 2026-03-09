@@ -85,6 +85,7 @@ async def _get_current_location():
     Returns (lat, lon) or (None, None) on failure.
     """
     if sys.platform != "win32" or Geolocator is None:
+        return (None, None)
         return _get_current_location_ip()  # Fallback to IP for non-windows
 
     try:
@@ -154,6 +155,23 @@ class AttendanceSystem:
             os.makedirs('output')
             
         self.load_database()
+
+    def _preprocess_frame(self, frame):
+        """
+        Enhance lighting robustness using CLAHE (Contrast Limited Adaptive Histogram Equalization).
+        Returns a processed BGR frame.
+        """
+        # Convert to LAB color space
+        lab = cv2.cvtColor(frame, cv2.COLOR_BGR2LAB)
+        l, a, b = cv2.split(lab)
+        
+        # Apply CLAHE to the L-channel (lightness)
+        clahe = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(8,8))
+        cl = clahe.apply(l)
+        
+        # Merge back and convert to BGR
+        limg = cv2.merge((cl, a, b))
+        return cv2.cvtColor(limg, cv2.COLOR_LAB2BGR)
 
     def load_database(self):
         """
@@ -717,23 +735,27 @@ class AttendanceSystem:
             print("✅ Face detected. Verifying identity...")
             box = boxes[selected_idx]
             
-            # Get embedding
+            # Ensure we get the correct face tensor
+            # self.mtcnn(img) returns a list of tensors if keep_all=True
             faces = self.mtcnn(img)
+            
+            if faces is None or (isinstance(faces, list) and len(faces) == 0):
+                print("❌ Attendance Failed: Face detection inconsistent.")
+                return
+
             if isinstance(faces, list):
-                if len(faces) == 0:
+                if selected_idx >= len(faces):
+                    print("❌ Attendance Failed: Selected face index out of bounds.")
                     return
-                # Must pick the same index!
-                # MTCNN(keep_all=True) returns faces in same order as boxes usually, 
-                # strictly speaking we should crop using the box to be 100% sure, 
-                # but facenet_pytorch typically aligns. 
                 face_tensor = faces[selected_idx]
             else:
-                face_tensor = faces # Should be list if keep_all=True
+                face_tensor = faces 
                 
-            # Ensure 4D tensor
+            # Ensure 4D tensor [1, 3, 160, 160]
             if face_tensor.ndim == 3:
                 face_tensor = face_tensor.unsqueeze(0)
-                
+            
+            # Generate embedding
             embedding = self.resnet(face_tensor.to(self.device)).detach()
 
             # Compare with database (fast, vectorized)
@@ -809,14 +831,14 @@ class AttendanceSystem:
             return
 
         # Optimization & Accuracy params
-        process_every_n_frames = 4  # Process detection every 4 frames
+        process_every_n_frames = 2  # Increased responsiveness
+        detection_scale = 0.5  # Scale down frame for faster detection
         frame_count = 0
         
-        # Stability tracking: We need a face to be recognized for 'integrity_threshold' consecutive checks
-        # to ensure it's not a glitch.
+        # Stability tracking
         current_match_name = None
         consecutive_match_count = 0
-        integrity_threshold = 3  # Require 3 consecutive confirmations
+        integrity_threshold = 3
         
         # UI State
         face_locations = []
@@ -831,11 +853,19 @@ class AttendanceSystem:
                 print("❌ Error: Failed to grab frame.")
                 break
 
+            # 1. Lighting Robustness (CLAHE)
+            processed_frame = self._preprocess_frame(frame)
+
+            # 2. Faster Detection (Resize)
+            h, w = frame.shape[:2]
+            detect_w, detect_h = int(w * detection_scale), int(h * detection_scale)
+            small_frame = cv2.resize(processed_frame, (detect_w, detect_h))
+            
             # Process generation
             if frame_count % process_every_n_frames == 0 and not success_trigger:
                 
-                # Pre-processing
-                rgb_small_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                # Pre-processing for torch
+                rgb_small_frame = cv2.cvtColor(small_frame, cv2.COLOR_BGR2RGB)
                 pil_img = Image.fromarray(rgb_small_frame)
                 
                 # Detect
@@ -849,45 +879,45 @@ class AttendanceSystem:
                     consecutive_match_count = 0
                     current_match_name = None
                 else:
-                    # We only care about the largest face for "Gate Access" style
                     # Find largest box
                     largest_box = None
                     max_area = 0
                     for box in boxes:
                         area = (box[2] - box[0]) * (box[3] - box[1])
-                        if area > 1000 and area > max_area: # Ignore tiny faces
+                        if area > (2500 * detection_scale) and area > max_area: # Scaled threshold
                             max_area = area
                             largest_box = box
                     
                     if largest_box is not None:
-                        # Process only the largest/main face
-                        face_locations = [largest_box]
+                        # Map locations back to original frame scale for UI
+                        x1, y1, x2, y2 = [int(b / detection_scale) for b in largest_box]
+                        face_locations = [(x1, y1, x2, y2)]
                         
-                        x1, y1, x2, y2 = [int(b) for b in largest_box]
-                        h, w, _ = frame.shape
-                        x1 = max(0, x1); y1 = max(0, y1); x2 = min(w, x2); y2 = min(h, y2)
+                        # Use PIL for original quality crop if possible, but small_frame is faster
+                        # For recognition, quality matters, but small_frame is often enough if scaled well.
+                        # Let's crop from the processed_frame (full res) for better recognition.
+                        x1_s, y1_s, x2_s, y2_s = [int(b) for b in largest_box]
+                        x1_s = max(0, x1_s); y1_s = max(0, y1_s); x2_s = min(detect_w, x2_s); y2_s = min(detect_h, y2_s)
                         
-                        face_img = pil_img.crop((x1, y1, x2, y2))
+                        face_img = pil_img.crop((x1_s, y1_s, x2_s, y2_s))
                         
                         # Resize & Normalize
-                        face_img = face_img.resize((160, 160))
+                        face_img = face_img.resize((160, 160), Image.BILINEAR)
                         face_arr = np.array(face_img).astype(np.float32)
                         face_arr = (face_arr - 127.5) / 128.0
                         face_tensor = torch.tensor(face_arr).permute(2, 0, 1).unsqueeze(0)
                         
                         embedding = self.resnet(face_tensor.to(self.device)).detach()
 
+                        # Compare
                         # Compare (fast, vectorized)
                         best_match_name, min_dist = self._find_best_match(embedding)
                         
-                        # Strict threshold for "High Accuracy" request
-                        # Default was 0.6, let's use self.threshold (which is 0.6)
                         if min_dist > self.threshold:
                             best_match_name = "Unknown"
                         
                         face_names.append(best_match_name)
                         
-                        # Stability Logic
                         if best_match_name != "Unknown":
                             if best_match_name == current_match_name:
                                 consecutive_match_count += 1
@@ -957,6 +987,17 @@ class AttendanceSystem:
         cv2.destroyAllWindows()
 
     async def log_attendance(self, name, timestamp):
+        """Log the attendance to a CSV file. If out of range, log as 'out of radius'."""
+        allowed, msg = await check_location_allowed()
+        filename = "attendance_log.csv"
+        date_str = timestamp.strftime("%Y-%m-%d")
+        time_str = timestamp.strftime("%H:%M:%S")
+        
+        if not allowed:
+            print(f"❌ Attendance recorded as 'out of radius': {msg}")
+            attendance_status = "out of radius"
+        else:
+            attendance_status = "present"
         """Log the attendance to a CSV file. If out of range, log as 'OUT OF RANGE'."""
         allowed, msg = await check_location_allowed()
         filename = "attendance_log.csv"
@@ -973,8 +1014,23 @@ class AttendanceSystem:
         with open(filename, 'a', newline='') as f:
             writer = csv.writer(f)
             if not file_exists:
-                writer.writerow(["Name", "Date", "Time"])
-            writer.writerow([name, date_str, time_str])
+                writer.writerow(["Name", "Date", "Time", "Attendance"])
+            writer.writerow([name, date_str, time_str, attendance_status])
+
+
+# NOTE: admin_set_location() removed from menu - location is now set in code above.
+# This function is kept for future admin interface implementation.
+# def admin_set_location():
+#     """Let admin set attendance location: center (lat, lon) and radius in meters. Enable/disable check."""
+#     ...
+
+
+async def async_main():
+    # Load the full database root so new registrations create their own folder:
+    #   sample_faces/<StudentName>/{left,right,up,down}.jpg
+    system = AttendanceSystem(database_path="sample_faces")
+    writer.writerow(["Name", "Date", "Time"])
+    writer.writerow([name, date_str, time_str])
 
 
 # NOTE: admin_set_location() removed from menu - location is now set in code above.
@@ -998,6 +1054,9 @@ async def async_main():
 
         if choice == '1':
             name = input("Enter Name: ")
+            cam_idx_str = input("Enter Camera Index (default 0): ")
+            cam_idx = int(cam_idx_str) if cam_idx_str.strip() else 0
+            system.register_from_camera(name, cam_idx)
             print("  a. Enter Image Path")
             print("  b. Capture from Camera")
             reg_choice = input("  Choose method (a/b): ").lower()

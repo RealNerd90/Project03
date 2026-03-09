@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Face Recognition Enrollment - AttendanceManager</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- CSS -->
+    <link rel="stylesheet" href="style.css">
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+</head>
+
+<body class="bg-gray-light">
+    <!-- Navbar (simplified for sign in page) -->
+    <nav class="navbar navbar-border">
+        <div class="logo">
+            <i class="ph-fill ph-check-square-offset"></i>
+            <span>AttendancePro</span>
+        </div>
+        <div class="nav-links">
+            <a href="index.html">Home</a>
+            <a href="#">Support</a>
+            <a href="#">About</a>
+        </div>
+    </nav>
+
+    <main class="enrollment-wrapper">
+        <div class="enrollment-card">
+            <div class="enrollment-header">
+                <h1 class="enrollment-title">Face Recognition Enrollment</h1>
+                <p class="enrollment-subtitle">Please position your face within the frame and look directly at the
+                    camera.</p>
+            </div>
+
+            <div class="camera-preview-container">
+                <div class="live-preview-badge">
+                    <span class="live-dot"></span> LIVE PREVIEW
+                </div>
+                <div class="face-guide">
+                    <div class="face-icon-container">
+                        <i class="ph-fill ph-user-circle"></i>
+                    </div>
+                </div>
+            </div>
+
+            <form class="enrollment-form">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="fullName">Full Name</label>
+                        <div class="input-with-icon">
+                            <i class="ph-fill ph-user input-icon"></i>
+                            <input type="text" id="fullName" placeholder="Enter full name" required>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="employeeId">Employee/Student ID</label>
+                        <div class="input-with-icon">
+                            <i class="ph-fill ph-identification-card input-icon"></i>
+                            <input type="text" id="employeeId" placeholder="ID-00000" required>
+                        </div>
+                    </div>
+                </div>
+
+                <button type="button" class="btn btn-primary btn-full capture-btn">
+                    <i class="ph-fill ph-camera"></i> Capture & Register
+                </button>
+            </form>
+
+            <div class="security-info">
+                <i class="ph-fill ph-shield-check"></i> Encrypted biometric data processing
+            </div>
+
+            <hr class="separator-line mx-4">
+
+            <div class="already-registered">
+                Already registered? <a href="signin.html" class="link-primary">Sign In</a>
+            </div>
+
+            <div class="card-bottom-bar"></div>
+        </div>
+    </main>
+
+    <footer class="signin-footer">
+        <p class="copyright">© 2024 AttendanceManager Biometric Enrollment System.</p>
+    </footer>
+</body>
+
+</html>

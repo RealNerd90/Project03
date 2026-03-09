@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign In - AttendancePro</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- CSS -->
+    <link rel="stylesheet" href="style.css">
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+</head>
+
+<body class="bg-gray-light">
+    <!-- Navbar (simplified for sign in page) -->
+    <nav class="navbar navbar-border">
+        <div class="logo">
+            <i class="ph-fill ph-check-square-offset"></i>
+            <span>AttendancePro</span>
+        </div>
+        <div class="nav-links">
+            <a href="index.html">Home</a>
+            <a href="#">Support</a>
+            <a href="#">About</a>
+        </div>
+    </nav>
+
+    <main class="signin-wrapper">
+        <div class="signin-card-container">
+            <div class="signin-card">
+
+                <!-- Left Side: Camera Scan -->
+                <div class="signin-left">
+                    <div class="camera-placeholder">
+                        <div class="camera-circle">
+                            <!-- Outer circle with light blue border -->
+                            <div class="camera-inner-circle">
+                                <!-- Inner grey area with user icon -->
+                                <i class="ph-fill ph-user-circle"></i>
+                            </div>
+                        </div>
+                        <button class="btn btn-primary btn-scan-floating">
+                            <i class="ph ph-webcam"></i> Scan Now
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Vertical Divider -->
+                <div class="signin-divider"></div>
+
+                <!-- Right Side: Info & Manual Login -->
+                <div class="signin-right">
+                    <h2 class="verification-title">Identity Verification</h2>
+
+                    <div class="instruction-box">
+                        <p><i>"Position your face or ID card within the frame"</i></p>
+                    </div>
+
+                    <div class="info-note">
+                        <i class="ph-fill ph-info info-icon"></i>
+                        <p>Ensure you are in a well-lit area for faster face recognition.</p>
+                    </div>
+
+                    <hr class="separator-line">
+
+                    <p class="trouble-text">Having trouble with the camera?</p>
+
+                    <button class="btn-manual-login">
+                        <div class="btn-manual-left">
+                            <i class="ph ph-sign-in"></i>
+                            <span>Manual Login</span>
+                        </div>
+                        <i class="ph ph-caret-right"></i>
+                    </button>
+                </div>
+
+            </div>
+
+            <!-- Below Card Text -->
+            <div class="below-card-actions">
+                <p class="register-prompt">Don't have an account? <a href="#" class="link-primary">Register Now</a></p>
+                <p class="security-note"><i class="ph-fill ph-shield-check"></i> Enterprise-grade biometric security
+                    active</p>
+            </div>
+        </div>
+    </main>
+
+    <footer class="signin-footer">
+        <p class="copyright">© 2024 AttendancePro Management System. All rights reserved.</p>
+    </footer>
+</body>
+
+</html>
