@@ -1,16 +1,18 @@
+import os
+import sys
+import asyncio
+import csv
+import json
+import math
+from datetime import datetime, timezone, timedelta
+
 import torch
 import cv2
 import numpy as np
 from facenet_pytorch import MTCNN, InceptionResnetV1
 from PIL import Image, ImageDraw, ImageFont
-import os
+
 import re
-import csv
-import json
-import math
-from datetime import datetime, timezone, timedelta
-import asyncio
-import sys
 if sys.platform == "win32":
     try:
         from winrt.windows.devices.geolocation import Geolocator, PositionStatus, GeolocationAccessStatus
@@ -814,12 +816,16 @@ class AttendanceSystem:
         except Exception as e:
             print(f"❌ Error processing attendance: {e}")
 
-    async def run_live_mode(self, camera_index=0):
+    async def run_live_mode(self, camera_index=0, mark_attendance: bool = True, return_name: bool = False):
         """
-        Run the attendance system in live mode.
-        - Scans until a face is matched.
-        - Requires strict confirmation (multiple consecutive frames) for accuracy.
-        - Marks attendance and closes automatically on success.
+        Run the system in live face-recognition mode.
+
+        - Scans until a face is confidently matched.
+        - If mark_attendance=True (default), calls log_attendance and shows
+          the 'attendance marked' UI.
+        - If mark_attendance=False, performs the same detection & verification
+          but does NOT record attendance; when return_name=True it returns the
+          matched person's name (or None on failure).
         """
         print(f"\n🎥 Starting Live Attendance Mode (Camera Index: {camera_index})...")
         print("Scaning for faces... (Press 'q' to quit manually)")
@@ -846,6 +852,7 @@ class AttendanceSystem:
         system_message = "Scanning..."
         success_trigger = False
         success_timer_start = None
+        final_match_name = None
 
         while True:
             ret, frame = cap.read()
@@ -929,11 +936,14 @@ class AttendanceSystem:
                             
                             if consecutive_match_count >= integrity_threshold:
                                 # SUCCESS!
-                                IST = timezone(timedelta(hours=5, minutes=30))
-                                attendance_timestamp = datetime.now(IST)
-                                await self.log_attendance(current_match_name, attendance_timestamp)
-                                
-                                system_message = f"Done! Attendance Marked: {current_match_name}"
+                                final_match_name = current_match_name
+                                if mark_attendance:
+                                    IST = timezone(timedelta(hours=5, minutes=30))
+                                    attendance_timestamp = datetime.now(IST)
+                                    await self.log_attendance(current_match_name, attendance_timestamp)
+                                    system_message = f"Done! Attendance Marked: {current_match_name}"
+                                else:
+                                    system_message = f"Verified: {current_match_name}"
                                 success_trigger = True
                                 success_timer_start = datetime.now()
                         else:
@@ -986,36 +996,52 @@ class AttendanceSystem:
         cap.release()
         cv2.destroyAllWindows()
 
+        if return_name:
+            return final_match_name
+
     async def log_attendance(self, name, timestamp):
-        """Log the attendance to a CSV file. If out of range, log as 'out of radius'."""
+        """
+        Persist attendance using the Django ORM instead of a CSV file.
+
+        If the current location is outside the allowed radius, the record is
+        still stored but marked as 'out_of_radius' and the time field is left
+        empty.
+        """
+        # Lazy Django setup so this script can be run standalone
+        os.environ.setdefault("DJANGO_SETTINGS_MODULE", "backend.settings")
+        try:
+            import django  # type: ignore
+
+            django.setup()
+            from attendance.models import AttendanceRecord  # type: ignore
+        except Exception as exc:
+            print(f"❌ Could not initialise Django ORM: {exc}")
+            return
+
         allowed, msg = await check_location_allowed()
-        filename = "attendance_log.csv"
+
         date_str = timestamp.strftime("%Y-%m-%d")
         time_str = timestamp.strftime("%H:%M:%S")
-        
+
         if not allowed:
             print(f"❌ Attendance recorded as 'out of radius': {msg}")
-            attendance_status = "out of radius"
+            status = AttendanceRecord.STATUS_OUT_OF_RADIUS
+            time_value = None
         else:
-            attendance_status = "present"
-        """Log the attendance to a CSV file. If out of range, log as 'OUT OF RANGE'."""
-        allowed, msg = await check_location_allowed()
-        filename = "attendance_log.csv"
-        date_str = timestamp.strftime("%Y-%m-%d")
-        
-        if not allowed:
-            print(f"❌ Attendance not recorded: {msg}")
-            time_str = "OUT OF RANGE"
-        else:
-            time_str = timestamp.strftime("%H:%M:%S")
+            status = AttendanceRecord.STATUS_PRESENT
+            time_value = timestamp.time()
             print(f"📝 Attendance recorded for {name} at {time_str} (Local Time)")
 
-        file_exists = os.path.exists(filename)
-        with open(filename, 'a', newline='') as f:
-            writer = csv.writer(f)
-            if not file_exists:
-                writer.writerow(["Name", "Date", "Time", "Attendance"])
-            writer.writerow([name, date_str, time_str, attendance_status])
+        try:
+            AttendanceRecord.objects.create(
+                name=name,
+                date=timestamp.date(),
+                time=time_value,
+                status=status,
+            )
+            print("✅ Attendance saved to Django database.")
+        except Exception as exc:
+            print(f"❌ Failed to save attendance to database: {exc}")
 
 
 # NOTE: admin_set_location() removed from menu - location is now set in code above.

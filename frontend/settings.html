@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+{% load static %}
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Settings - AttendancePro</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- CSS -->
+    <link rel="stylesheet" href="{% static 'style.css' %}">
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+</head>
+
+<body class="bg-gray-lighter">
+    <!-- Navbar -->
+    <nav class="navbar dashboard-navbar navbar-border flex-between">
+        <div class="logo">
+            <i class="ph-fill ph-check-square-offset text-primary"></i>
+            <span>AttendancePro</span>
+        </div>
+
+        <div class="nav-links-center">
+            <a href="{% url 'dashboard' %}" class="nav-link">Dashboard</a>
+            <a href="{% url 'analytics' %}" class="nav-link">Personal Analytics</a>
+            <a href="{% url 'settings' %}" class="nav-link active">Settings</a>
+        </div>
+
+        <div class="nav-right">
+            <button class="icon-btn-rounded mx-2">
+                <i class="ph-fill ph-bell"></i>
+            </button>
+            <div class="profile-avatar">
+                <img src="https://i.pravatar.cc/150?img=11" alt="Profile">
+            </div>
+        </div>
+    </nav>
+
+    <main class="settings-wrapper py-12 pb-16">
+        <div class="container max-w-6xl">
+            <!-- Page Header -->
+            <div class="settings-header mb-12">
+                <h1 class="text-5xl font-bold text-dark mb-2">Settings</h1>
+                <p class="text-lg text-gray">Manage your personal preferences, security settings, and profile details.
+                </p>
+            </div>
+
+            <div class="card border-none shadow-sm overflow-hidden">
+                <!-- Profile Management -->
+                <section class="settings-section p-10 border-b">
+                    <h2 class="section-title-dark mb-8">Profile Management</h2>
+                    <div class="flex items-center gap-6">
+                        <div class="profile-edit-avatar relative w-32 h-32 flex-shrink-0">
+                            <img src="https://i.pravatar.cc/150?img=11" alt="Alex Johnson"
+                                class="w-full h-full rounded-full object-cover shadow-md">
+                            <button
+                                class="absolute bottom-1 right-1 bg-primary text-white w-9 h-9 rounded-full flex items-center justify-center border-4 border-white shadow-sm hover:scale-110 transition-transform">
+                                <i class="ph-bold ph-camera"></i>
+                            </button>
+                        </div>
+                        <div class="flex-1">
+                            <h3 class="text-xl font-bold text-dark">Alex Johnson</h3>
+                            <p class="text-sm text-gray mb-4">Employee ID: EMP-1234 • Senior Product Designer</p>
+                            <button class="btn btn-outline btn-sm">Change Profile Photo</button>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Notification Preferences -->
+                <section class="settings-section p-10 border-b">
+                    <h2 class="section-title-dark mb-8">Notification Preferences</h2>
+                    <div class="flex flex-col gap-8">
+                        <div class="flex-between">
+                            <div>
+                                <h3 class="text-base font-semibold text-dark mb-1">Attendance Alert</h3>
+                                <p class="text-sm text-gray">Receive reminders for checking in and out of your shifts.
+                                </p>
+                            </div>
+                            <label class="switch">
+                                <input type="checkbox" checked>
+                                <span class="slider round"></span>
+                            </label>
+                        </div>
+
+                        <div class="flex-between">
+                            <div>
+                                <h3 class="text-base font-semibold text-dark mb-1">Notification Sound</h3>
+                                <p class="text-sm text-gray">Choose the sound for your attendance alerts.</p>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <div class="select-wrapper relative">
+                                    <select class="select-custom min-w-[200px] appearance-none">
+                                        <option>Standard Chime</option>
+                                        <option>Minimalist Pop</option>
+                                        <option>Deep Echo</option>
+                                    </select>
+                                    <i
+                                        class="ph-bold ph-caret-down absolute right-4 top-1/2 -translate-y-1/2 text-xs text-light pointer-events-none"></i>
+                                </div>
+                                <button class="icon-btn-rounded">
+                                    <i class="ph-fill ph-play text-lg"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Biometric Security -->
+                <section class="settings-section p-10 border-b">
+                    <div class="flex gap-8">
+                        <div
+                            class="icon-box bg-[#F0F7FF] text-primary w-14 h-14 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-sm border border-blue-50">
+                            <i class="ph-fill ph-smiley text-3xl"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-base font-bold text-dark mb-2">Biometric Security</h2>
+                            <p class="text-sm text-gray mb-6 leading-relaxed max-w-2xl">Improve face recognition
+                                accuracy for your clock-in
+                                sessions. Ensure you are in a well-lit environment for the best results.</p>
+                            <button class="btn btn-primary btn-sm gap-2 px-6">
+                                <i class="ph-bold ph-arrows-clockwise"></i> Recalibrate Face Data
+                            </button>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Appearance -->
+                <section class="settings-section p-10 border-b">
+                    <h2 class="section-title-dark mb-8">Appearance</h2>
+                    <div class="grid grid-cols-3 gap-6">
+                        <!-- System Default -->
+                        <div
+                            class="appearance-card p-4 border rounded-xl flex flex-col gap-4 cursor-pointer transition-all hover:border-primary">
+                            <div
+                                class="appearance-preview bg-gray-lighter rounded-lg h-24 flex items-center justify-center text-light">
+                                <i class="ph-bold ph-monitor text-2xl"></i>
+                            </div>
+                            <div>
+                                <p class="text-sm font-bold text-dark">System Default</p>
+                                <p class="text-xs text-gray">Match device settings</p>
+                            </div>
+                        </div>
+                        <!-- Light Mode -->
+                        <div
+                            class="appearance-card active p-4 border rounded-xl flex flex-col gap-4 cursor-pointer transition-all">
+                            <div
+                                class="appearance-preview bg-white rounded-lg h-24 flex items-center justify-center text-primary shadow-sm border">
+                                <i class="ph-bold ph-sun text-2xl"></i>
+                            </div>
+                            <div class="flex-between w-full">
+                                <div>
+                                    <p class="text-sm font-bold text-dark">Light Mode</p>
+                                    <p class="text-xs text-gray">Classic clean look</p>
+                                </div>
+                                <i class="ph-fill ph-check-circle text-primary text-xl"></i>
+                            </div>
+                        </div>
+                        <!-- Dark Mode -->
+                        <div
+                            class="appearance-card dark-mode-card p-4 border rounded-xl flex flex-col gap-4 cursor-pointer transition-all hover:border-primary">
+                            <div
+                                class="appearance-preview bg-dark-card rounded-lg h-24 flex items-center justify-center text-light">
+                                <i class="ph-bold ph-moon text-2xl"></i>
+                            </div>
+                            <div>
+                                <p class="text-sm font-bold text-dark">Dark Mode</p>
+                                <p class="text-xs text-gray">Easier on the eyes</p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Contact Information -->
+                <section class="settings-section p-10 border-b">
+                    <h2 class="section-title-dark mb-8">Contact Information</h2>
+                    <div class="max-w-md">
+                        <label class="block text-sm font-semibold text-dark mb-2">Email Address</label>
+                        <div class="flex gap-3">
+                            <div class="input-group relative flex-1">
+                                <i class="ph-bold ph-envelope absolute left-3 top-1/2 -translate-y-1/2 text-gray"></i>
+                                <input type="email" value="alex.johnson@corporate.com" class="input-field pl-10 w-full"
+                                    readonly>
+                            </div>
+                            <button class="btn btn-primary px-6">Save Changes</button>
+                        </div>
+                        <p class="text-xs text-light mt-3 italic">Changing your email requires verification via your old
+                            address.</p>
+                    </div>
+                </section>
+
+                <!-- Account Actions -->
+                <section class="settings-section p-10 flex-between">
+                    <div>
+                        <h2 class="text-base font-semibold text-dark mb-1">Account Actions</h2>
+                        <p class="text-sm text-gray">Sign out of your session on this device.</p>
+                    </div>
+                    <button class="btn btn-outline-red gap-2 px-8">
+                        <i class="ph-bold ph-sign-out"></i> Logout
+                    </button>
+                </section>
+            </div>
+        </div>
+    </main>
+
+    <!-- Page Footer -->
+    <footer class="settings-footer py-8 border-t mt-auto">
+        <div class="container flex-center gap-2 flex-wrap">
+            <p class="text-xs text-gray">© 2024 Attendance Portal</p>
+            <span class="text-gray">•</span>
+            <a href="#" class="text-xs text-gray hover:text-primary transition-colors">Privacy Policy</a>
+            <span class="text-gray">•</span>
+            <a href="#" class="text-xs text-gray hover:text-primary transition-colors">Terms of Service</a>
+        </div>
+    </footer>
+
+</body>
+
+</html>

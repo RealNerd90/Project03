@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+{% load static %}
 
 <head>
     <meta charset="UTF-8">
@@ -10,7 +11,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <!-- CSS -->
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="{% static 'style.css' %}">
     <!-- Phosphor Icons -->
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
 </head>
@@ -23,7 +24,7 @@
             <span>AttendancePro</span>
         </div>
         <div class="nav-links">
-            <a href="index.html">Home</a>
+            <a href="{% url 'welcome' %}">Home</a>
             <a href="#">Support</a>
             <a href="#">About</a>
         </div>
@@ -48,13 +49,14 @@
                 </div>
             </div>
 
-            <form class="enrollment-form">
+            <form class="enrollment-form" method="post" action="{% url 'register-face' %}">
+                {% csrf_token %}
                 <div class="form-row">
                     <div class="form-group">
                         <label for="fullName">Full Name</label>
                         <div class="input-with-icon">
                             <i class="ph-fill ph-user input-icon"></i>
-                            <input type="text" id="fullName" placeholder="Enter full name" required>
+                            <input type="text" id="fullName" name="fullName" placeholder="Enter full name" required>
                         </div>
                     </div>
                     <div class="form-group">
@@ -66,7 +68,7 @@
                     </div>
                 </div>
 
-                <button type="button" class="btn btn-primary btn-full capture-btn">
+                <button type="submit" class="btn btn-primary btn-full capture-btn">
                     <i class="ph-fill ph-camera"></i> Capture & Register
                 </button>
             </form>
@@ -75,10 +77,20 @@
                 <i class="ph-fill ph-shield-check"></i> Encrypted biometric data processing
             </div>
 
+            {% if registration_success %}
+                <p class="text-sm text-green" style="margin-top: 0.75rem;">
+                    Successfully registered {{ registered_name }}. You can now use face recognition to check in.
+                </p>
+            {% elif error %}
+                <p class="text-sm text-red" style="margin-top: 0.75rem;">
+                    {{ error }}
+                </p>
+            {% endif %}
+
             <hr class="separator-line mx-4">
 
             <div class="already-registered">
-                Already registered? <a href="signin.html" class="link-primary">Sign In</a>
+                Already registered? <a href="{% url 'signin' %}" class="link-primary">Sign In</a>
             </div>
 
             <div class="card-bottom-bar"></div>

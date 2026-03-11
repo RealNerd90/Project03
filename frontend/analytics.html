@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+{% load static %}
 
 <head>
     <meta charset="UTF-8">
@@ -10,7 +11,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <!-- CSS -->
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="{% static 'style.css' %}">
     <!-- Phosphor Icons -->
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
 </head>
@@ -24,9 +25,9 @@
         </div>
 
         <div class="nav-links-center">
-            <a href="dashboard.html" class="nav-link">Dashboard</a>
-            <a href="analytics.html" class="nav-link active">Personal Analytics</a>
-            <a href="#" class="nav-link">Settings</a>
+            <a href="{% url 'dashboard' %}" class="nav-link">Dashboard</a>
+            <a href="{% url 'analytics' %}" class="nav-link active">Personal Analytics</a>
+            <a href="{% url 'settings' %}" class="nav-link">Settings</a>
         </div>
 
         <div class="nav-right">

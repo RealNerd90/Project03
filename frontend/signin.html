@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+{% load static %}
 
 <head>
     <meta charset="UTF-8">
@@ -10,7 +11,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <!-- CSS -->
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="{% static 'style.css' %}">
     <!-- Phosphor Icons -->
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
 </head>
@@ -23,7 +24,7 @@
             <span>AttendancePro</span>
         </div>
         <div class="nav-links">
-            <a href="index.html">Home</a>
+            <a href="{% url 'welcome' %}">Home</a>
             <a href="#">Support</a>
             <a href="#">About</a>
         </div>
@@ -43,9 +44,12 @@
                                 <i class="ph-fill ph-user-circle"></i>
                             </div>
                         </div>
-                        <button class="btn btn-primary btn-scan-floating">
-                            <i class="ph ph-webcam"></i> Scan Now
-                        </button>
+                        <form method="post" action="{% url 'signin-scan' %}">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-primary btn-scan-floating">
+                                <i class="ph ph-webcam"></i> Scan Now
+                            </button>
+                        </form>
                     </div>
                 </div>
 
@@ -82,7 +86,7 @@
 
             <!-- Below Card Text -->
             <div class="below-card-actions">
-                <p class="register-prompt">Don't have an account? <a href="#" class="link-primary">Register Now</a></p>
+                <p class="register-prompt">Don't have an account? <a href="{% url 'register' %}" class="link-primary">Register Now</a></p>
                 <p class="security-note"><i class="ph-fill ph-shield-check"></i> Enterprise-grade biometric security
                     active</p>
             </div>
