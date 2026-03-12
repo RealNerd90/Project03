@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+{% load static %}
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign In Successful - AttendancePro</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'style.css' %}">
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+</head>
+
+<body class="bg-gray-light no-scroll">
+    <nav class="navbar navbar-border">
+        <div class="logo">
+            <i class="ph-fill ph-check-square-offset"></i>
+            <span>AttendancePro</span>
+        </div>
+
+        <div class="nav-links">
+            <a href="{% url 'welcome' %}">Home</a>
+            <a href="#">Support</a>
+            <a href="#">About</a>
+        </div>
+    </nav>
+
+    <main class="success-wrapper">
+        <div class="success-card">
+            <div class="success-badge">
+                <div class="success-badge-inner">
+                    <i class="ph-fill ph-check-circle"></i>
+                </div>
+            </div>
+
+            <h1 class="success-title">Identification Successful!</h1>
+            <p class="success-subtitle">You have been signed in successfully.</p>
+
+            <div class="success-profile">
+                <div class="success-avatar">
+                    <img src="https://i.pravatar.cc/200?u={{ name|urlencode }}" alt="{{ name }}">
+                </div>
+                <div class="success-user">
+                    <p class="success-name">{{ name }}</p>
+                    <p class="success-id">ID: <span>{{ user_id }}</span></p>
+                    <p class="success-role">Organization Member • Engineering Dept</p>
+                </div>
+            </div>
+
+            <div class="attendance-log">
+                <h2 class="attendance-log-title">Attendance Logged</h2>
+                <div class="attendance-row">
+                    <div class="attendance-label"><i class="ph-fill ph-calendar"></i> Date</div>
+                    <div class="attendance-value">{{ date }}</div>
+                </div>
+                <div class="attendance-row">
+                    <div class="attendance-label"><i class="ph-fill ph-clock"></i> Check-in Time</div>
+                    <div class="attendance-value">{{ time }}</div>
+                </div>
+            </div>
+
+            <div class="redirect-note">
+                Redirecting to dashboard in <span id="countdown">3</span> seconds...
+            </div>
+        </div>
+    </main>
+
+    <footer class="signin-footer">
+        <p class="copyright">© 2024 AttendancePro Management System. All rights reserved.</p>
+    </footer>
+
+    <script>
+        (function () {
+            const countdownEl = document.getElementById('countdown');
+            let seconds = 3;
+
+            const interval = setInterval(() => {
+                seconds -= 1;
+                if (countdownEl) countdownEl.textContent = seconds;
+                if (seconds <= 0) {
+                    clearInterval(interval);
+                    window.location.href = '{% url "dashboard" %}';
+                }
+            }, 1000);
+        })();
+    </script>
+</body>
+
+</html>

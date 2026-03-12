@@ -16,88 +16,202 @@
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
 </head>
 
-<body class="bg-gray-light flex-col-page">
-    <!-- Navbar -->
+<body class="bg-gray-light no-scroll">
     <nav class="navbar dashboard-navbar navbar-border flex-between">
         <div class="logo">
-            <i class="ph-fill ph-check-square-offset text-primary"></i>
-            <span>AttendancePro</span>
-        </div>
-
-        <div class="nav-links-center">
-            <a href="{% url 'dashboard' %}" class="nav-link">Dashboard</a>
-            <a href="{% url 'analytics' %}" class="nav-link">Personal Analytics</a>
-            <a href="{% url 'settings' %}" class="nav-link">Settings</a>
+            <i class="ph-fill ph-fingerprint text-primary"></i>
+            <span>Attendance Portal</span>
         </div>
 
         <div class="nav-right">
+            <a href="{% url 'settings' %}" class="nav-link">Settings</a>
             <button class="icon-btn-rounded mx-2">
                 <i class="ph-fill ph-bell"></i>
             </button>
             <div class="profile-avatar">
-                <img src="https://i.pravatar.cc/150?img=11" alt="Profile">
+                <img src="https://i.pravatar.cc/150?img=32" alt="Profile">
             </div>
         </div>
     </nav>
 
-    <main class="scanner-main flex-1 flex flex-col items-center relative w-full overflow-hidden">
+    <main class="scanner-page">
+        <div class="scanner-card">
+            <header class="scanner-header">
+                <h1 class="scanner-title">Face Recognition Check-In</h1>
+                <p class="scanner-subtitle">Position your face within the frame for secure biometric verification.</p>
+            </header>
 
-        <!-- Glowing background effect -->
-        <div class="glow-bg"></div>
-
-        <!-- Top Spacer to help center the content area -->
-        <div class="scanner-top-spacer flex-1"></div>
-
-        <div class="scanner-content text-center z-10">
-            <h1 class="scanner-title">Face Recognition Check-In</h1>
-            <p class="scanner-subtitle">Position your face within the frame for secure biometric verification.</p>
-
-            <!-- Camera Circle Container -->
-            <div class="scanner-circle-container mt-6 mb-10 mx-auto relative">
-                <!-- Outer dashed animated ring -->
-                <div class="scanner-ring-outer"></div>
-
-                <!-- Inner Camera Canvas -->
-                <div class="scanner-feed-circle relative overflow-hidden">
-                    <!-- Face Detection Bounding Box overlay -->
-                    <div
-                        class="detection-corners absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
-                        <div class="corner corner-tl"></div>
-                        <div class="corner corner-tr"></div>
-                        <div class="corner corner-bl"></div>
-                        <div class="corner corner-br"></div>
+            <section class="scanner-center">
+                <div class="scanner-circle-container">
+                    <div class="scanner-ring-outer"></div>
+                    <div class="scanner-feed-circle">
+                        <video id="scannerVideo" autoplay playsinline muted></video>
+                        <canvas id="scannerOverlay" class="scanner-overlay" aria-hidden="true"></canvas>
+                        <div class="scanner-hint">
+                            <i class="ph-fill ph-user-circle"></i>
+                        </div>
                     </div>
                 </div>
-            </div>
 
-            <!-- Status Indicator Pill -->
-            <div
-                class="status-pill blue-light-bg text-primary font-medium flex items-center justify-center gap-2 mx-auto mb-8 px-6 py-2 rounded-full shadow-sm max-w-sm">
-                <i class="ph-fill ph-video-camera animation-pulse"></i>
-                Scanning... Please look directly into the camera
-            </div>
+                <div class="scanner-status" id="scannerStatus">
+                    <i class="ph-fill ph-video-camera animation-pulse"></i>
+                    <span id="scannerStatusText">Scanning... Please look directly into the camera</span>
+                </div>
 
-            <!-- Actions -->
-            <div class="action-row flex justify-center gap-8 mt-10">
-                <button class="btn btn-secondary btn-icon px-8">
-                    <i class="ph-bold ph-x"></i> Cancel
-                </button>
-                <button class="btn btn-primary btn-icon px-8">
-                    <i class="ph-bold ph-arrows-clockwise"></i> Retry
-                </button>
-            </div>
-        </div>
+                <div class="scanner-actions">
+                    <button id="scannerCancel" class="btn btn-outline btn-md">
+                        <i class="ph-bold ph-x"></i> Cancel
+                    </button>
+                    <button id="scannerRetry" class="btn btn-primary btn-md">
+                        <i class="ph-bold ph-arrows-clockwise"></i> Retry
+                    </button>
+                </div>
+            </section>
 
-        <!-- Pushed Copyright Area -->
-        <div
-            class="scanner-copyright-container w-full text-center text-xs text-gray uppercase letter-spacing-1 z-10 mt-auto">
-            <div class="flex flex-center gap-2 mb-2">
-                <i class="ph-fill ph-lock-key"></i>
-                <span>SECURE BIOMETRIC DATA ENCRYPTED</span>
-            </div>
-            <div>© 2024 Attendance Portal. All rights reserved.</div>
+            <footer class="scanner-footer">
+                <p class="scanner-footer-text"><i class="ph-fill ph-lock-key"></i> Secure biometric data encrypted</p>
+                <p class="scanner-footer-copy">© 2024 Attendance Portal. All rights reserved.</p>
+            </footer>
         </div>
     </main>
+
+    <script>
+        const video = document.getElementById('scannerVideo');
+        const overlay = document.getElementById('scannerOverlay');
+        const statusText = document.getElementById('scannerStatusText');
+        const scannerStatus = document.getElementById('scannerStatus');
+        const cancelBtn = document.getElementById('scannerCancel');
+        const retryBtn = document.getElementById('scannerRetry');
+
+        let scanInterval = null;
+        let scanning = false;
+
+        function getCookie(name) {
+            const value = `; ${document.cookie}`;
+            const parts = value.split(`; ${name}=`);
+            if (parts.length === 2) return parts.pop().split(';').shift();
+        }
+
+        function setStatus(text, type = 'info') {
+            statusText.textContent = text;
+            if (type === 'error') {
+                scannerStatus.style.color = '#dc2626';
+            } else if (type === 'success') {
+                scannerStatus.style.color = '#16a34a';
+            } else {
+                scannerStatus.style.color = '#0b69ff';
+            }
+        }
+
+        function updateOverlaySize() {
+            const rect = video.getBoundingClientRect();
+            overlay.width = rect.width;
+            overlay.height = rect.height;
+            overlay.style.width = `${rect.width}px`;
+            overlay.style.height = `${rect.height}px`;
+        }
+
+        function clearOverlay() {
+            const ctx = overlay.getContext('2d');
+            ctx.clearRect(0, 0, overlay.width, overlay.height);
+        }
+
+        async function startCamera() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
+                video.srcObject = stream;
+                video.onloadedmetadata = () => {
+                    video.play();
+                    updateOverlaySize();
+                };
+            } catch (err) {
+                setStatus('Camera access denied. Please allow camera permission.', 'error');
+            }
+        }
+
+        async function scanFrame() {
+            if (!video.srcObject) return;
+
+            const canvas = document.createElement('canvas');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
+
+            try {
+                const response = await fetch('{% url "signin-scan" %}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken'),
+                    },
+                    body: JSON.stringify({ image: dataUrl }),
+                });
+
+                const result = await response.json();
+                if (result.success) {
+                    setStatus(`Attendance recorded for ${result.name}. Redirecting...`, 'success');
+                    if (scanInterval) clearInterval(scanInterval);
+
+                    const timestamp = result.timestamp ? new Date(result.timestamp) : new Date();
+                    const date = timestamp.toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
+                    const time = timestamp.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+                    setTimeout(() => {
+                        const params = new URLSearchParams({ name: result.name || '', date, time });
+                        window.location.href = `/signin/success/?${params.toString()}`;
+                    }, 900);
+                    return;
+                }
+
+                if (result.box) {
+                    const [x1, y1, x2, y2] = result.box;
+                    const faceArea = (x2 - x1) * (y2 - y1);
+                    const frameArea = video.videoWidth * video.videoHeight;
+                    const ratio = faceArea / frameArea;
+
+                    if (ratio < 0.06) {
+                        setStatus('Move closer to the camera.', 'error');
+                    } else if (ratio > 0.35) {
+                        setStatus('Move a bit away from the camera.', 'error');
+                    } else {
+                        setStatus('Hold still and look at the camera.', 'info');
+                    }
+                } else {
+                    setStatus('No face detected. Please center your face.', 'error');
+                }
+            } catch (err) {
+                setStatus('Error communicating with server. Please try again.', 'error');
+            }
+        }
+
+        function beginScan() {
+            if (scanning) return;
+            scanning = true;
+            setStatus('Scanning... Please look directly into the camera', 'info');
+            scanInterval = setInterval(scanFrame, 900);
+        }
+
+        function stopScan() {
+            if (!scanning) return;
+            scanning = false;
+            if (scanInterval) clearInterval(scanInterval);
+            setStatus('Scan paused. Press retry to continue.', 'error');
+        }
+
+        cancelBtn.addEventListener('click', () => {
+            stopScan();
+            window.location.href = '{% url "dashboard" %}';
+        });
+
+        retryBtn.addEventListener('click', () => {
+            beginScan();
+        });
+
+        window.addEventListener('resize', updateOverlaySize);
+        startCamera().then(beginScan);
+    </script>
 </body>
 
 </html>

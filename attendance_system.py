@@ -1,7 +1,6 @@
 import os
 import sys
 import asyncio
-import csv
 import json
 import math
 from datetime import datetime, timezone, timedelta
@@ -816,6 +815,109 @@ class AttendanceSystem:
         except Exception as e:
             print(f"❌ Error processing attendance: {e}")
 
+    async def recognize_image_bytes(self, image_bytes: bytes, mark_attendance: bool = True):
+        """Recognize a face from image bytes (e.g., from a browser capture).
+
+        Returns a dict with:
+          - recognized: bool
+          - name: str or None
+          - distance: float or None
+          - message: str
+          - attendance_marked: bool
+        """
+        from io import BytesIO
+
+        try:
+            img = Image.open(BytesIO(image_bytes)).convert("RGB")
+        except Exception as e:
+            return {
+                "recognized": False,
+                "name": None,
+                "distance": None,
+                "message": f"Invalid image data: {e}",
+                "attendance_marked": False,
+            }
+
+        try:
+            boxes, _ = self.mtcnn.detect(img)
+            if boxes is None or len(boxes) == 0:
+                return {
+                    "recognized": False,
+                    "name": None,
+                    "distance": None,
+                    "box": None,
+                    "message": "No face detected.",
+                    "attendance_marked": False,
+                }
+
+            # Pick the largest face to reduce false positives for background faces
+            largest_box = None
+            max_area = 0
+            for box in boxes:
+                area = (box[2] - box[0]) * (box[3] - box[1])
+                if area > max_area:
+                    max_area = area
+                    largest_box = box
+
+            if largest_box is None:
+                return {
+                    "recognized": False,
+                    "name": None,
+                    "distance": None,
+                    "box": None,
+                    "message": "No face found.",
+                    "attendance_marked": False,
+                }
+
+            # Crop the face and compute embedding
+            x1, y1, x2, y2 = [int(b) for b in largest_box]
+            face = img.crop((x1, y1, x2, y2)).resize((160, 160), Image.BILINEAR)
+            face_arr = np.array(face).astype(np.float32)
+            face_arr = (face_arr - 127.5) / 128.0
+            face_tensor = torch.tensor(face_arr).permute(2, 0, 1).unsqueeze(0)
+            embedding = self.resnet(face_tensor.to(self.device)).detach()
+
+            best_match_name, min_dist = self._find_best_match(embedding)
+
+            if min_dist > self.threshold:
+                return {
+                    "recognized": False,
+                    "name": None,
+                    "distance": float(min_dist),
+                    "box": [x1, y1, x2, y2],
+                    "message": "Unknown face.",
+                    "attendance_marked": False,
+                }
+
+            # Mark attendance optionally
+            attendance_marked = False
+            timestamp = None
+            if mark_attendance:
+                IST = timezone(timedelta(hours=5, minutes=30))
+                timestamp = datetime.now(IST)
+                await self.log_attendance(best_match_name, timestamp)
+                attendance_marked = True
+
+            return {
+                "recognized": True,
+                "name": best_match_name,
+                "distance": float(min_dist),
+                "box": [x1, y1, x2, y2],
+                "message": "Face recognized.",
+                "attendance_marked": attendance_marked,
+                "timestamp": timestamp.isoformat() if timestamp else None,
+            }
+
+        except Exception as e:
+            return {
+                "recognized": False,
+                "name": None,
+                "distance": None,
+                "box": None,
+                "message": f"Recognition error: {e}",
+                "attendance_marked": False,
+            }
+
     async def run_live_mode(self, camera_index=0, mark_attendance: bool = True, return_name: bool = False):
         """
         Run the system in live face-recognition mode.
@@ -1049,14 +1151,6 @@ class AttendanceSystem:
 # def admin_set_location():
 #     """Let admin set attendance location: center (lat, lon) and radius in meters. Enable/disable check."""
 #     ...
-
-
-async def async_main():
-    # Load the full database root so new registrations create their own folder:
-    #   sample_faces/<StudentName>/{left,right,up,down}.jpg
-    system = AttendanceSystem(database_path="sample_faces")
-    writer.writerow(["Name", "Date", "Time"])
-    writer.writerow([name, date_str, time_str])
 
 
 # NOTE: admin_set_location() removed from menu - location is now set in code above.

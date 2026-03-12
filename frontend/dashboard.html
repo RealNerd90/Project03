@@ -56,29 +56,29 @@
 
                     <div class="time-display-container">
                         <div class="time-block-group">
-                            <div class="time-block blue-light-bg">09</div>
+                            <div class="time-block blue-light-bg" id="clock-hours">09</div>
                             <span class="time-label">HOURS</span>
                         </div>
                         <span class="time-colon">:</span>
                         <div class="time-block-group">
-                            <div class="time-block gray-light-bg">41</div>
+                            <div class="time-block gray-light-bg" id="clock-minutes">41</div>
                             <span class="time-label">MINUTES</span>
                         </div>
                         <span class="time-colon">:</span>
                         <div class="time-block-group">
-                            <div class="time-block blue-accent-bg text-primary">05</div>
+                            <div class="time-block blue-accent-bg text-primary" id="clock-seconds">05</div>
                             <span class="time-label">SECONDS</span>
                         </div>
                     </div>
 
-                    <p class="date-text">Monday, October 23rd, 2023</p>
+                    <p class="date-text" id="clock-date">Monday, October 23rd, 2023</p>
                 </div>
 
                 <!-- Action Buttons Row -->
                 <div class="action-buttons-row">
-                    <button class="btn btn-primary btn-xl flex-1 justify-center gap-2">
+                    <a href="{% url 'scanner' %}" class="btn btn-primary btn-xl flex-1 justify-center gap-2">
                         <i class="ph-bold ph-sign-in"></i> Check In
-                    </button>
+                    </a>
                     <button class="btn btn-outline btn-xl flex-1 justify-center gap-2">
                         <i class="ph-bold ph-coffee"></i> Log Break
                     </button>
@@ -232,6 +232,55 @@
 
         </div> <!-- End Container grid -->
     </main>
+
+    <script>
+        (function () {
+            const hoursEl = document.getElementById('clock-hours');
+            const minutesEl = document.getElementById('clock-minutes');
+            const secondsEl = document.getElementById('clock-seconds');
+            const dateEl = document.getElementById('clock-date');
+
+            if (!hoursEl || !minutesEl || !secondsEl || !dateEl) return;
+
+            const weekdayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+            const monthNames = [
+                'January', 'February', 'March', 'April', 'May', 'June',
+                'July', 'August', 'September', 'October', 'November', 'December'
+            ];
+
+            function getOrdinalSuffix(day) {
+                if (day > 3 && day < 21) return day + 'th';
+                switch (day % 10) {
+                    case 1: return day + 'st';
+                    case 2: return day + 'nd';
+                    case 3: return day + 'rd';
+                    default: return day + 'th';
+                }
+            }
+
+            function pad(num) {
+                return num.toString().padStart(2, '0');
+            }
+
+            function updateClock() {
+                const now = new Date();
+
+                hoursEl.textContent = pad(now.getHours());
+                minutesEl.textContent = pad(now.getMinutes());
+                secondsEl.textContent = pad(now.getSeconds());
+
+                const weekday = weekdayNames[now.getDay()];
+                const month = monthNames[now.getMonth()];
+                const dayWithSuffix = getOrdinalSuffix(now.getDate());
+                const year = now.getFullYear();
+
+                dateEl.textContent = `${weekday}, ${month} ${dayWithSuffix}, ${year}`;
+            }
+
+            updateClock();
+            setInterval(updateClock, 1000);
+        })();
+    </script>
 
 </body>
 

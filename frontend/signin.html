@@ -40,16 +40,24 @@
                         <div class="camera-circle">
                             <!-- Outer circle with light blue border -->
                             <div class="camera-inner-circle">
-                                <!-- Inner grey area with user icon -->
-                                <i class="ph-fill ph-user-circle"></i>
+                                <video id="cameraVideo" autoplay playsinline muted></video>
+                                <canvas id="overlayCanvas" class="overlay-canvas" aria-hidden="true"></canvas>
+                                <div id="cameraOverlay" class="camera-overlay">
+                                    <!-- Inner grey area with user icon (shown until camera starts) -->
+                                    <i class="ph-fill ph-user-circle"></i>
+                                </div>
                             </div>
                         </div>
-                        <form method="post" action="{% url 'signin-scan' %}">
-                            {% csrf_token %}
-                            <button type="submit" class="btn btn-primary btn-scan-floating">
-                                <i class="ph ph-webcam"></i> Scan Now
-                            </button>
-                        </form>
+                        <div class="scan-controls">
+                            <div id="scanStatus" class="scan-status" aria-live="polite">Ready to scan</div>
+                            <form id="scanForm" method="post" action="{% url 'signin-scan' %}">
+                                {% csrf_token %}
+                                <button id="scanButton" type="submit" class="btn btn-primary btn-scan-floating">
+                                    <i class="ph ph-webcam"></i> Scan Now
+                                </button>
+                            </form>
+                        </div>
+                        <canvas id="scanCanvas" style="display:none"></canvas>
                     </div>
                 </div>
 
@@ -96,6 +104,188 @@
     <footer class="signin-footer">
         <p class="copyright">© 2024 AttendancePro Management System. All rights reserved.</p>
     </footer>
+    <script>
+        const video = document.getElementById('cameraVideo');
+        const overlay = document.getElementById('cameraOverlay');
+        const overlayCanvas = document.getElementById('overlayCanvas');
+        const scanForm = document.getElementById('scanForm');
+        const scanButton = document.getElementById('scanButton');
+        const scanStatus = document.getElementById('scanStatus');
+        const scanCanvas = document.getElementById('scanCanvas');
+
+        let scanLoopId = null;
+        let scanInProgress = false;
+
+        function getCookie(name) {
+            const value = `; ${document.cookie}`;
+            const parts = value.split(`; ${name}=`);
+            if (parts.length === 2) return parts.pop().split(';').shift();
+        }
+
+        function setStatus(text, statusType = 'info') {
+            scanStatus.textContent = text;
+            if (statusType === 'success') {
+                scanStatus.style.color = '#16a34a';
+                scanStatus.style.borderColor = 'rgba(22, 163, 74, 0.25)';
+                scanStatus.style.backgroundColor = 'rgba(22, 163, 74, 0.08)';
+            } else if (statusType === 'error') {
+                scanStatus.style.color = '#dc2626';
+                scanStatus.style.borderColor = 'rgba(220, 38, 38, 0.25)';
+                scanStatus.style.backgroundColor = 'rgba(220, 38, 38, 0.08)';
+            } else {
+                scanStatus.style.color = '#0b69ff';
+                scanStatus.style.borderColor = 'rgba(11, 105, 255, 0.2)';
+                scanStatus.style.backgroundColor = 'rgba(11, 105, 255, 0.08)';
+            }
+        }
+
+        async function startCamera() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
+                video.srcObject = stream;
+                video.onloadedmetadata = () => {
+                    video.play();
+                    overlay.classList.add('hidden');
+                    updateOverlaySize();
+                };
+            } catch (err) {
+                console.error('Camera access denied or unavailable', err);
+                setStatus('Unable to access camera. Please allow camera permission.', true);
+            }
+        }
+
+        function clearOverlay() {
+            const ctx = overlayCanvas.getContext('2d');
+            ctx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+        }
+
+        function drawBox(box, color = 'red', label = '') {
+            // No visible box: we use status teks to guide the user.
+            // This function is intentionally blank to keep UI clean.
+            clearOverlay();
+        }
+
+        function updateOverlaySize() {
+            const rect = video.getBoundingClientRect();
+            const vidWidth = video.videoWidth || rect.width;
+            const vidHeight = video.videoHeight || rect.height;
+
+            overlayCanvas.width = vidWidth;
+            overlayCanvas.height = vidHeight;
+            overlayCanvas.style.width = `${rect.width}px`;
+            overlayCanvas.style.height = `${rect.height}px`;
+        }
+
+        async function captureAndSend() {
+            if (!video.srcObject) {
+                setStatus('Camera not ready yet. Please allow access and try again.', true);
+                return;
+            }
+
+            if (scanInProgress) return;
+            scanInProgress = true;
+
+            scanButton.disabled = true;
+            setStatus('Capturing...');
+
+            // Ensure overlay canvas matches video size
+            updateOverlaySize();
+
+            const width = video.videoWidth;
+            const height = video.videoHeight;
+            scanCanvas.width = width;
+            scanCanvas.height = height;
+            const ctx = scanCanvas.getContext('2d');
+            ctx.drawImage(video, 0, 0, width, height);
+
+            const dataUrl = scanCanvas.toDataURL('image/jpeg', 0.9);
+
+            try {
+                const response = await fetch(scanForm.action, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken'),
+                    },
+                    body: JSON.stringify({ image: dataUrl }),
+                });
+
+                const result = await response.json();
+                if (result.success) {
+                    setStatus(`Welcome, ${result.name}! Redirecting...`, 'success');
+
+                    const timestamp = result.timestamp ? new Date(result.timestamp) : new Date();
+                    const date = timestamp.toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
+                    const time = timestamp.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+                    setTimeout(() => {
+                        const params = new URLSearchParams({
+                            name: result.name || '',
+                            date,
+                            time,
+                        });
+                        window.location.href = `/signin/success/?${params.toString()}`;
+                    }, 1000);
+
+                    stopScanLoop(false);
+                    return;
+                }
+
+                // Face not recognized / no face detected
+                if (result.box) {
+                    const box = result.box;
+                    const frameArea = video.videoWidth * video.videoHeight;
+                    const faceArea = (box[2] - box[0]) * (box[3] - box[1]);
+                    const percent = faceArea / frameArea;
+
+                    if (percent < 0.06) {
+                        setStatus('Move closer to the camera.', 'error');
+                    } else if (percent > 0.35) {
+                        setStatus('Move a bit away from the camera.', 'error');
+                    } else {
+                        setStatus('Hold still and look at the camera.', 'info');
+                    }
+                } else {
+                    setStatus(result.message || 'No face detected. Please center your face.', 'error');
+                }
+            } catch (err) {
+                console.error('Error during face recognition request', err);
+                setStatus('Error communicating with server. Please try again.', true);
+            } finally {
+                scanButton.disabled = false;
+                scanInProgress = false;
+            }
+        }
+
+        function startScanLoop() {
+            if (scanLoopId) return;
+            scanButton.textContent = 'Scanning...';
+            scanLoopId = window.setInterval(captureAndSend, 800);
+        }
+
+        function stopScanLoop(clear = true) {
+            if (scanLoopId) {
+                clearInterval(scanLoopId);
+                scanLoopId = null;
+            }
+            scanButton.textContent = 'Scan Now';
+            if (clear) {
+                clearOverlay();
+            }
+        }
+
+        scanForm.addEventListener('submit', (event) => {
+            event.preventDefault();
+            if (scanLoopId) {
+                stopScanLoop();
+            } else {
+                startScanLoop();
+            }
+        });
+
+        startCamera();
+        window.addEventListener('resize', updateOverlaySize);
+    </script>
 </body>
 
 </html>

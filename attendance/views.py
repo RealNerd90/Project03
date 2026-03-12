@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import base64
+import json
 from datetime import datetime, date, time as time_cls
 import asyncio
 
@@ -25,7 +27,11 @@ def dashboard(request: HttpRequest) -> HttpResponse:
 
 def analytics(request: HttpRequest) -> HttpResponse:
     """Render the analytics page."""
-    return render(request, "analytics.html")
+    # Load recent attendance entries to show in the analytics history table.
+    # This uses the same model backing additional attendance features.
+    attendance_records = AttendanceRecord.objects.all().order_by("-date", "-time")[:50]
+
+    return render(request, "analytics.html", {"attendance_records": attendance_records})
 
 
 def settings_view(request: HttpRequest) -> HttpResponse:
@@ -48,17 +54,87 @@ def registration(request: HttpRequest) -> HttpResponse:
     return render(request, "registration.html")
 
 
+def signin_success(request: HttpRequest) -> HttpResponse:
+    """Render a success landing page after a successful face sign-in."""
+    name = request.GET.get("name", "Visitor")
+    date_str = request.GET.get("date")
+    time_str = request.GET.get("time")
+
+    # Provide defaults if values are missing
+    now = datetime.now()
+    if not date_str:
+        date_str = now.strftime("%B %d, %Y")
+    if not time_str:
+        time_str = now.strftime("%I:%M:%S %p")
+
+    # Simple deterministic ID based on name (not secure; for display only)
+    try:
+        user_id = f"#{abs(hash(name)) % 900000 + 100000}"
+    except Exception:
+        user_id = "#000000"
+
+    context = {
+        "name": name,
+        "date": date_str,
+        "time": time_str,
+        "user_id": user_id,
+    }
+    return render(request, "signin_success.html", context)
+
+
 @require_POST
 def signin_scan(request: HttpRequest) -> HttpResponse:
-    """
-    Use existing face data to sign a user in by running the live
-    attendance scan (webcam). This reuses run_live_mode, which will
-    log attendance into the Django database via log_attendance.
+    """Handle sign-in via face recognition.
+
+    - If called as a JSON API (image sent from the browser), runs recognition without
+      opening any desktop windows and returns JSON result.
+    - If called as a standard form POST (legacy), falls back to the existing
+      desktop webcam UI (cv2 window).
     """
     system = get_system()
 
+    content_type = request.META.get("CONTENT_TYPE", "")
+    if content_type.startswith("application/json"):
+        try:
+            payload = json.loads(request.body.decode("utf-8") or "{}")
+        except Exception as exc:
+            return JsonResponse({"success": False, "error": f"Invalid JSON: {exc}"}, status=400)
+
+        image_b64 = payload.get("image")
+        if not image_b64:
+            return JsonResponse({"success": False, "error": "Missing 'image' field"}, status=400)
+
+        # Support data-url style payloads
+        if "," in image_b64:
+            image_b64 = image_b64.split(",", 1)[1]
+
+        try:
+            image_bytes = base64.b64decode(image_b64)
+        except Exception as exc:
+            return JsonResponse({"success": False, "error": f"Invalid base64 image: {exc}"}, status=400)
+
+        try:
+            result = asyncio.run(system.recognize_image_bytes(image_bytes, mark_attendance=True))
+        except Exception as exc:
+            return JsonResponse({"success": False, "error": str(exc)}, status=500)
+
+        if result.get("recognized"):
+            return JsonResponse({
+                "success": True,
+                "name": result.get("name"),
+                "message": result.get("message", ""),
+                "box": result.get("box"),
+                "timestamp": result.get("timestamp"),
+            })
+
+        return JsonResponse({
+            "success": False,
+            "message": result.get("message", "Face not recognized."),
+            "box": result.get("box"),
+        })
+
+    # Fallback: legacy desktop webcam mode (opens a cv2 window on the host).
     try:
-        # Run live mode but do NOT mark attendance; just get the matched name.
         matched_name = asyncio.run(
             system.run_live_mode(camera_index=0, mark_attendance=False, return_name=True)
         )
