@@ -45,8 +45,7 @@
             <!-- Page Header -->
             <div class="settings-header mb-12">
                 <h1 class="text-5xl font-bold text-dark mb-2">Settings</h1>
-                <p class="text-lg text-gray">Manage your personal preferences, security settings, and profile details.
-                </p>
+                <p class="text-lg text-gray">Manage your personal preferences, security settings, and profile details.</p>
             </div>
 
             <div class="card border-none shadow-sm overflow-hidden">
@@ -55,17 +54,25 @@
                     <h2 class="section-title-dark mb-8">Profile Management</h2>
                     <div class="flex items-center gap-6">
                         <div class="profile-edit-avatar relative w-32 h-32 flex-shrink-0">
-                            <img src="https://i.pravatar.cc/150?img=11" alt="Alex Johnson"
-                                class="w-full h-full rounded-full object-cover shadow-md">
-                            <button
-                                class="absolute bottom-1 right-1 bg-primary text-white w-9 h-9 rounded-full flex items-center justify-center border-4 border-white shadow-sm hover:scale-110 transition-transform">
-                                <i class="ph-bold ph-camera"></i>
-                            </button>
+                            <img src="{% if profile_photo_url %}{{ profile_photo_url }}{% else %}{% static 'default-avatar.svg' %}{% endif %}" alt="{{ display_name }}" class="w-full h-full rounded-full object-cover shadow-md">
                         </div>
                         <div class="flex-1">
-                            <h3 class="text-xl font-bold text-dark">Alex Johnson</h3>
-                            <p class="text-sm text-gray mb-4">Employee ID: EMP-1234 • Senior Product Designer</p>
-                            <button class="btn btn-outline btn-sm">Change Profile Photo</button>
+                            <h3 class="text-xl font-bold text-dark">{{ display_name }}</h3>
+                            <p class="text-sm text-gray mb-4">Face ID User • AttendancePro</p>
+                            <div class="flex gap-2 flex-wrap">
+                                <form id="uploadPhotoForm" method="post" enctype="multipart/form-data" class="flex gap-2">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="upload_profile_photo">
+                                    <input id="profilePhotoInput" type="file" name="profile_photo" accept="image/*" hidden>
+                                    <button type="button" id="changeProfilePhoto" class="btn btn-outline btn-sm">Change Profile Photo</button>
+                                    <button type="submit" class="btn btn-primary btn-sm">Upload</button>
+                                </form>
+                                <form method="post" class="flex">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="remove_profile_photo">
+                                    <button type="submit" class="btn btn-outline-red btn-sm">Remove Photo</button>
+                                </form>
+                            </div>
                         </div>
                     </div>
                 </section>
@@ -93,17 +100,23 @@
                             </div>
                             <div class="flex items-center gap-3">
                                 <div class="select-wrapper relative">
-                                    <select class="select-custom min-w-[200px] appearance-none">
-                                        <option>Standard Chime</option>
-                                        <option>Minimalist Pop</option>
-                                        <option>Deep Echo</option>
+                                    <select id="notificationSoundSelect" class="select-custom min-w-[200px] appearance-none">
+                                        {% for sound in notification_sounds %}
+                                            {% with display_name=sound|slice:":-4" %}
+                                                <option value="{{ sound }}" {% if sound == selected_sound %}selected{% endif %}>{{ display_name }}</option>
+                                            {% endwith %}
+                                        {% endfor %}
+                                        {% if notification_sounds|length == 0 %}
+                                            <option disabled>No sounds available</option>
+                                        {% endif %}
                                     </select>
                                     <i
                                         class="ph-bold ph-caret-down absolute right-4 top-1/2 -translate-y-1/2 text-xs text-light pointer-events-none"></i>
                                 </div>
-                                <button class="icon-btn-rounded">
+                                <button id="playSoundBtn" class="icon-btn-rounded" type="button">
                                     <i class="ph-fill ph-play text-lg"></i>
                                 </button>
+                                <audio id="notificationSoundPlayer" preload="auto" style="display:none;"></audio>
                             </div>
                         </div>
                     </div>
@@ -182,14 +195,12 @@
                         <div class="flex gap-3">
                             <div class="input-group relative flex-1">
                                 <i class="ph-bold ph-envelope absolute left-3 top-1/2 -translate-y-1/2 text-gray"></i>
-                                <input type="email" value="alex.johnson@corporate.com" class="input-field pl-10 w-full"
-                                    readonly>
+                                <input type="email" value="{{ email }}" class="input-field pl-10 w-full" readonly>
                             </div>
                             <button class="btn btn-primary px-6">Save Changes</button>
                         </div>
                         <p class="text-xs text-light mt-3 italic">Changing your email requires verification via your old
-                            address.</p>
-                    </div>
+                            address.</p>                            <p class="text-xs text-green mt-1" id="profileMessage" style="display:none;"></p>                    </div>
                 </section>
 
                 <!-- Account Actions -->
@@ -216,6 +227,63 @@
             <a href="#" class="text-xs text-gray hover:text-primary transition-colors">Terms of Service</a>
         </div>
     </footer>
+
+    <script>
+        const soundSelect = document.getElementById('notificationSoundSelect');
+        const playBtn = document.getElementById('playSoundBtn');
+        const soundPlayer = document.getElementById('notificationSoundPlayer');
+        const changeProfilePhoto = document.getElementById('changeProfilePhoto');
+        const profilePhotoInput = document.getElementById('profilePhotoInput');
+
+        function updateAudioSource() {
+            if (!soundSelect || !soundPlayer) return;
+            const selected = soundSelect.value;
+            if (!selected) return;
+            const audioPathCandidate = '/static/' + encodeURIComponent(selected);
+            soundPlayer.src = audioPathCandidate;
+        }
+
+        if (soundSelect) {
+            soundSelect.addEventListener('change', () => {
+                updateAudioSource();
+                if (soundPlayer) {
+                    soundPlayer.pause();
+                    soundPlayer.currentTime = 0;
+                }
+                localStorage.setItem('notification_sound', soundSelect.value);
+            });
+        }
+
+        if (playBtn) {
+            playBtn.addEventListener('click', () => {
+                updateAudioSource();
+                if (soundPlayer) {
+                    soundPlayer.play().catch(() => {
+                        // Some browsers require user gesture; we already have one.
+                    });
+                }
+            });
+        }
+
+        if (changeProfilePhoto && profilePhotoInput) {
+            changeProfilePhoto.addEventListener('click', () => {
+                profilePhotoInput.click();
+            });
+        }
+
+        // If localStorage has selection, apply it.
+        window.addEventListener('DOMContentLoaded', () => {
+            if (!soundSelect) return;
+            const stored = localStorage.getItem('notification_sound');
+            if (stored) {
+                const option = [...soundSelect.options].find((o) => o.value === stored);
+                if (option) {
+                    soundSelect.value = stored;
+                }
+            }
+            updateAudioSource();
+        });
+    </script>
 
 </body>
 

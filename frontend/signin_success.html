@@ -40,7 +40,9 @@
 
             <div class="success-profile">
                 <div class="success-avatar">
-                    <img src="https://i.pravatar.cc/200?u={{ name|urlencode }}" alt="{{ name }}">
+                    <div class="profile-avatar" style="width: 80px; height: 80px; border-radius: 50%; overflow: hidden;">
+                        <img src="{% static 'default-avatar.svg' %}" alt="{{ name }}" style="width: 100%; height: 100%; object-fit: cover;" />
+                    </div>
                 </div>
                 <div class="success-user">
                     <p class="success-name">{{ name }}</p>

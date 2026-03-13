@@ -219,11 +219,28 @@
                     const time = timestamp.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 
                     setTimeout(() => {
-                        const params = new URLSearchParams({
-                            name: result.name || '',
-                            date,
-                            time,
-                        });
+                        const params = new URLSearchParams({ name: result.name || '', date, time });
+
+                        // Capture live GPS at sign-in time (display only).
+                        if (navigator.geolocation) {
+                            navigator.geolocation.getCurrentPosition(
+                                (pos) => {
+                                    const lat = pos.coords.latitude;
+                                    const lon = pos.coords.longitude;
+                                    const accuracy = pos.coords.accuracy;
+                                    params.set('lat', String(lat));
+                                    params.set('lon', String(lon));
+                                    params.set('acc', String(accuracy));
+                                    window.location.href = `/signin/success/?${params.toString()}`;
+                                },
+                                () => {
+                                    window.location.href = `/signin/success/?${params.toString()}`;
+                                },
+                                { enableHighAccuracy: true, maximumAge: 0, timeout: 3000 }
+                            );
+                            return;
+                        }
+
                         window.location.href = `/signin/success/?${params.toString()}`;
                     }, 1000);
 

@@ -43,13 +43,16 @@
                     <span class="live-dot"></span> LIVE PREVIEW
                 </div>
                 <div class="face-guide">
-                    <div class="face-icon-container">
-                        <i class="ph-fill ph-user-circle"></i>
+                    <video id="registerVideo" autoplay playsinline muted></video>
+                    <div class="face-overlay" aria-hidden="true">
+                        <div class="face-icon-container">
+                            <i class="ph-fill ph-user-circle"></i>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <form class="enrollment-form" method="post" action="{% url 'register-face' %}">
+            <form id="registrationForm" class="enrollment-form" method="post" action="{% url 'register-face' %}">
                 {% csrf_token %}
                 <div class="form-row">
                     <div class="form-group">
@@ -60,17 +63,23 @@
                         </div>
                     </div>
                     <div class="form-group">
-                        <label for="employeeId">Employee/Student ID</label>
+                        <label for="email">Email</label>
                         <div class="input-with-icon">
-                            <i class="ph-fill ph-identification-card input-icon"></i>
-                            <input type="text" id="employeeId" placeholder="ID-00000" required>
+                            <i class="ph-fill ph-envelope input-icon"></i>
+                            <input type="email" id="email" name="email" placeholder="name@example.com" required>
                         </div>
                     </div>
                 </div>
 
-                <button type="submit" class="btn btn-primary btn-full capture-btn">
-                    <i class="ph-fill ph-camera"></i> Capture & Register
-                </button>
+                <div class="enrollment-action-row">
+                    <button type="submit" class="btn btn-primary capture-btn">
+                        <i class="ph-fill ph-camera"></i> Capture & Register
+                    </button>
+                    <button id="cancelRegister" type="button" class="btn btn-outline cancel-btn" style="display:none;">
+                        <i class="ph-fill ph-x-circle"></i> Cancel
+                    </button>
+                </div>
+                <p id="registerMessage" class="text-sm" style="margin-top:0.65rem; min-height:1.1rem;"></p>
             </form>
 
             <div class="security-info">
@@ -100,6 +109,103 @@
     <footer class="signin-footer">
         <p class="copyright">© 2024 AttendanceManager Biometric Enrollment System.</p>
     </footer>
+
+    <script>
+        const video = document.getElementById('registerVideo');
+        const message = document.getElementById('registerMessage');
+        const form = document.getElementById('registrationForm');
+        const cancelBtn = document.getElementById('cancelRegister');
+        let currentStream = null;
+
+        function setMessage(text, type = 'info') {
+            message.textContent = text;
+            if (type === 'error') {
+                message.style.color = '#dc2626';
+            } else if (type === 'success') {
+                message.style.color = '#16a34a';
+            } else {
+                message.style.color = '#111827';
+            }
+        }
+
+        async function startRegisterCamera() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
+                currentStream = stream;
+                video.srcObject = stream;
+                await video.play();
+                cancelBtn.style.display = 'inline-flex';
+            } catch (err) {
+                setMessage('Camera access required. Please allow webcam permission.', 'error');
+                cancelBtn.style.display = 'none';
+            }
+        }
+
+        function stopCamera() {
+            if (currentStream) {
+                currentStream.getTracks().forEach((track) => track.stop());
+                currentStream = null;
+                video.srcObject = null;
+            }
+            cancelBtn.style.display = 'none';
+        }
+
+        function captureFrameDataUrl() {
+            const canvas = document.createElement('canvas');
+            canvas.width = video.videoWidth || 640;
+            canvas.height = video.videoHeight || 480;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            return canvas.toDataURL('image/jpeg', 0.9);
+        }
+
+        form.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const nameInput = document.getElementById('fullName');
+            const fullName = nameInput.value.trim();
+            if (!fullName) {
+                setMessage('Please enter your full name.', 'error');
+                return;
+            }
+
+            if (!video.srcObject) {
+                setMessage('Camera not started. Please allow camera permission.', 'error');
+                return;
+            }
+
+            setMessage('Capturing image and registering...', 'info');
+            const imageData = captureFrameDataUrl();
+
+            try {
+                const response = await fetch('{% url "register-face" %}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                    },
+                    body: JSON.stringify({ fullName, image: imageData }),
+                });
+                const result = await response.json();
+                if (result.success) {
+                    setMessage(result.message || `Successfully registered ${fullName}.`, 'success');
+                    setTimeout(() => {
+                        window.location.href = '{% url "signin" %}';
+                    }, 1300);
+                } else {
+                    setMessage(result.error || result.message || 'Registration failed. Please try again.', 'error');
+                }
+            } catch (err) {
+                setMessage('Registration failed. Please try again.', 'error');
+            }
+        });
+
+        cancelBtn.addEventListener('click', () => {
+            stopCamera();
+            window.location.href = '{% url "welcome" %}';
+        });
+
+        startRegisterCamera();
+    </script>
 </body>
 
 </html>

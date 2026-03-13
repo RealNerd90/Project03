@@ -1,6 +1,20 @@
 from django.db import models
 
 
+class RegisteredUser(models.Model):
+    """Basic registry of people known to the face-recognition system."""
+
+    name = models.CharField(max_length=255, unique=True)
+    email = models.EmailField(blank=True, default="")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["name"]
+
+    def __str__(self) -> str:
+        return f"{self.name} <{self.email or 'no-email'}>"
+
+
 class AttendanceRecord(models.Model):
     """Single attendance event produced by the face-recognition system."""
 
@@ -20,6 +34,7 @@ class AttendanceRecord(models.Model):
         choices=STATUS_CHOICES,
         default=STATUS_PRESENT,
     )
+    check_out_time = models.TimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

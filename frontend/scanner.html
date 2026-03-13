@@ -29,7 +29,7 @@
                 <i class="ph-fill ph-bell"></i>
             </button>
             <div class="profile-avatar">
-                <img src="https://i.pravatar.cc/150?img=32" alt="Profile">
+                <img src="{% static 'default-avatar.svg' %}" alt="Profile" />
             </div>
         </div>
     </nav>
@@ -37,8 +37,8 @@
     <main class="scanner-page">
         <div class="scanner-card">
             <header class="scanner-header">
-                <h1 class="scanner-title">Face Recognition Check-In</h1>
-                <p class="scanner-subtitle">Position your face within the frame for secure biometric verification.</p>
+                <h1 class="scanner-title" id="scannerTitle">Face Recognition Check-In</h1>
+                <p class="scanner-subtitle" id="scannerSubtitle">Position your face within the frame for secure biometric verification.</p>
             </header>
 
             <section class="scanner-center">
@@ -129,6 +129,20 @@
             }
         }
 
+        const checkinEndpoint = '{% url "attendance-checkin-scan" %}';
+        const checkoutEndpoint = '{% url "attendance-checkout-scan" %}';
+
+        const params = new URLSearchParams(window.location.search);
+        const action = (params.get('action') || 'checkin').toLowerCase();
+        const isCheckout = action === 'checkout';
+
+        const titleEl = document.getElementById('scannerTitle');
+        const subtitleEl = document.getElementById('scannerSubtitle');
+        if (titleEl) titleEl.textContent = isCheckout ? 'Face Recognition Check-Out' : 'Face Recognition Check-In';
+        if (subtitleEl) subtitleEl.textContent = isCheckout
+            ? 'Look at the camera to securely check out.'
+            : 'Position your face within the frame for secure biometric verification.';
+
         async function scanFrame() {
             if (!video.srcObject) return;
 
@@ -140,7 +154,8 @@
             const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
 
             try {
-                const response = await fetch('{% url "signin-scan" %}', {
+                const endpoint = isCheckout ? checkoutEndpoint : checkinEndpoint;
+                const response = await fetch(endpoint, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -151,16 +166,16 @@
 
                 const result = await response.json();
                 if (result.success) {
-                    setStatus(`Attendance recorded for ${result.name}. Redirecting...`, 'success');
+                    setStatus(
+                        isCheckout
+                            ? `Checked out: ${result.name}. Redirecting...`
+                            : `Checked in: ${result.name}. Redirecting...`,
+                        'success'
+                    );
                     if (scanInterval) clearInterval(scanInterval);
 
-                    const timestamp = result.timestamp ? new Date(result.timestamp) : new Date();
-                    const date = timestamp.toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
-                    const time = timestamp.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-
                     setTimeout(() => {
-                        const params = new URLSearchParams({ name: result.name || '', date, time });
-                        window.location.href = `/signin/success/?${params.toString()}`;
+                        window.location.href = '{% url "dashboard" %}';
                     }, 900);
                     return;
                 }

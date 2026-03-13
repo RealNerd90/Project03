@@ -527,7 +527,8 @@ a {
     width: 80px;
     height: 80px;
     border-radius: 50%;
-    background: rgba(34, 197, 94, 0.18); /* green */
+    background: rgba(34, 197, 94, 0.18);
+    /* green */
     display: grid;
     place-items: center;
     border: 2px solid rgba(34, 197, 94, 0.35);
@@ -674,11 +675,13 @@ a {
     .success-card {
         padding: 2.5rem 1.5rem 1.5rem;
     }
+
     .success-profile {
         flex-direction: column;
         align-items: center;
         text-align: center;
     }
+
     .success-user {
         align-items: center;
     }
@@ -988,8 +991,9 @@ a {
     .signin-card {
         flex-direction: column;
         max-width: 500px;
-        }
     }
+}
+
 /* --- Registration Enrollment Page Specific --- */
 .enrollment-wrapper {
     flex-grow: 1;
@@ -1096,23 +1100,43 @@ a {
 }
 
 .face-guide {
-    width: 140px;
-    height: 180px;
-    border: 2px dashed rgba(255, 255, 255, 0.6);
-    border-radius: 50%;
+    width: 100%;
+    height: 100%;
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    position: relative;
     display: flex;
     justify-content: center;
     align-items: center;
+    background: #111827;
+}
+
+.face-guide video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.face-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    pointer-events: none;
+    background: linear-gradient(to top, rgba(0,0,0,0.35), rgba(0,0,0,0.1));
 }
 
 .face-icon-container i {
-    font-size: 3rem;
-    color: rgba(255, 255, 255, 0.8);
-    background-color: #9CA3AF;
+    font-size: 2.6rem;
+    color: rgba(255, 255, 255, 0.9);
+    background-color: rgba(107, 114, 128, 0.6);
     border-radius: 50%;
-    padding: 0;
+    padding: 0.2rem;
     line-height: 1;
 }
+
 
 .enrollment-form {
     display: flex;
@@ -1189,8 +1213,31 @@ a {
     font-size: 1.25rem;
 }
 
+.enrollment-action-row {
+    margin-top: 0.6rem;
+    display: flex;
+    gap: 0.65rem;
+    align-items: stretch;
+}
+
+.enrollment-action-row .btn {
+    flex: 1;
+    min-height: 46px;
+    padding: 0.65rem 0.95rem;
+    font-weight: 600;
+}
+
+.enrollment-action-row .cancel-btn {
+    border-color: #0a7dff;
+    color: #0a7dff;
+}
+
+.enrollment-action-row .cancel-btn:hover {
+    background: #eff6ff;
+}
+
 .capture-btn {
-    margin-top: 0.5rem;
+    margin-top: 0;
 }
 
 .security-info {
@@ -1327,6 +1374,10 @@ a {
     cursor: pointer;
     border: 2px solid transparent;
     transition: border-color 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #E5E7EB;
 }
 
 .profile-avatar:hover {
@@ -1337,6 +1388,19 @@ a {
     width: 100%;
     height: 100%;
     object-fit: cover;
+}
+
+.default-avatar {
+    background-color: #E5E7EB;
+    color: #6B7280;
+    border: 2px solid transparent;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.default-avatar i {
+    font-size: 1.2rem;
 }
 
 .dashboard-wrapper {
@@ -2691,13 +2755,17 @@ input:checked+.slider:before {
     background-color: white;
     border: 1px solid #E2E8F0;
     border-radius: 10px;
-    padding: 0.75rem 3rem 0.75rem 1.25rem;
+    padding: 0.75rem 4rem 0.75rem 1.25rem;
     font-size: 0.875rem;
     font-weight: 500;
     color: var(--text-dark);
     cursor: pointer;
     font-family: inherit;
     transition: border-color 0.2s, box-shadow 0.2s;
+    min-width: 220px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .select-custom:focus {
@@ -2713,7 +2781,8 @@ input:checked+.slider:before {
 }
 
 .select-wrapper .ph-caret-down {
-    right: 1.25rem !important;
+    right: 0.9rem !important;
+    pointer-events: none;
 }
 
 

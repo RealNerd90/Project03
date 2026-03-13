@@ -35,7 +35,7 @@
                 <i class="ph-fill ph-bell"></i>
             </button>
             <div class="profile-avatar">
-                <img src="https://i.pravatar.cc/150?img=11" alt="Profile">
+                <img src="{% static 'default-avatar.svg' %}" alt="Profile" />
             </div>
         </div>
     </nav>
@@ -255,7 +255,8 @@
                         <thead>
                             <tr class="bg-gray-lighter border-b">
                                 <th class="px-6 py-4 text-xs font-semibold text-gray uppercase">Date</th>
-                                <th class="px-6 py-4 text-xs font-semibold text-gray uppercase">Time</th>
+                                <th class="px-6 py-4 text-xs font-semibold text-gray uppercase">Check-In</th>
+                                <th class="px-6 py-4 text-xs font-semibold text-gray uppercase">Check-Out</th>
                                 <th class="px-6 py-4 text-xs font-semibold text-gray uppercase">Status</th>
                             </tr>
                         </thead>
@@ -264,15 +265,17 @@
                             <tr class="border-b transition-colors hover:bg-gray-lighter">
                                 <td class="px-6 py-5 font-semibold text-sm">{{ record.date|date:"M d, Y" }}</td>
                                 <td class="px-6 py-5 text-sm">{{ record.time|time:"h:i A"|default:'--' }}</td>
+                                <td class="px-6 py-5 text-sm">{{ record.check_out_time|time:"h:i A"|default:'--' }}</td>
                                 <td class="px-6 py-5 text-sm">
-                                    <span class="badge {% if record.status == 'present' %}badge-green{% else %}badge-red-light{% endif %}">
+                                    <span
+                                        class="badge {% if record.status == 'present' %}badge-green{% else %}badge-red-light{% endif %}">
                                         {{ record.get_status_display }}
                                     </span>
                                 </td>
                             </tr>
                             {% empty %}
                             <tr>
-                                <td class="px-6 py-5 text-sm" colspan="3">No attendance records found yet.</td>
+                                <td class="px-6 py-5 text-sm" colspan="4">No attendance records found yet.</td>
                             </tr>
                             {% endfor %}
                         </tbody>

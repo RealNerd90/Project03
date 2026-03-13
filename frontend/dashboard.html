@@ -34,7 +34,7 @@
                 <i class="ph-fill ph-bell"></i>
             </button>
             <div class="profile-avatar">
-                <img src="https://i.pravatar.cc/150?img=11" alt="Profile">
+                <img src="{% static 'default-avatar.svg' %}" alt="Profile" />
             </div>
         </div>
     </nav>
@@ -46,7 +46,7 @@
             <div class="col-main">
 
                 <div class="welcome-header">
-                    <h1>Welcome back, Alex</h1>
+                    <h1>Welcome back, {{ display_name }}</h1>
                     <p>It's a productive Monday! Check in to start your session.</p>
                 </div>
 
@@ -76,66 +76,51 @@
 
                 <!-- Action Buttons Row -->
                 <div class="action-buttons-row">
-                    <a href="{% url 'scanner' %}" class="btn btn-primary btn-xl flex-1 justify-center gap-2">
+                    <a href="{% url 'scanner' %}?action=checkin" class="btn btn-primary btn-xl flex-1 justify-center gap-2">
                         <i class="ph-bold ph-sign-in"></i> Check In
                     </a>
-                    <button class="btn btn-outline btn-xl flex-1 justify-center gap-2">
-                        <i class="ph-bold ph-coffee"></i> Log Break
-                    </button>
+                    <a href="{% url 'scanner' %}?action=checkout" class="btn btn-outline btn-xl flex-1 justify-center gap-2">
+                        <i class="ph-bold ph-sign-out"></i> Check Out
+                    </a>
                 </div>
 
                 <!-- Recent Activity Card -->
                 <div class="card mt-4">
                     <div class="card-header flex-between">
                         <h2 class="card-title">Recent Activity</h2>
-                        <a href="analytics.html" class="link-primary text-sm font-medium">View All</a>
+                        <a href="{% url 'analytics' %}" class="link-primary text-sm font-medium">View All</a>
                     </div>
 
                     <div class="activity-list">
-                        <!-- Activity Item 1 -->
+                        {% for item in recent_activity %}
                         <div class="activity-item py-4">
-                            <div class="activity-icon bg-green-light text-green">
+                            <div class="activity-icon {% if item.kind == 'checkin' %}bg-green-light text-green{% else %}bg-red-light text-red{% endif %}">
+                                {% if item.kind == 'checkin' %}
                                 <i class="ph-bold ph-sign-in"></i>
-                            </div>
-                            <div class="activity-details flex-1">
-                                <p class="activity-title">Checked In</p>
-                                <p class="activity-subtitle">Friday, Oct 20</p>
-                            </div>
-                            <div class="activity-time text-right">
-                                <p class="activity-title">08:52 AM</p>
-                                <p class="activity-subtitle">Office Branch A</p>
-                            </div>
-                        </div>
-                        <hr class="separator-light">
-                        <!-- Activity Item 2 -->
-                        <div class="activity-item py-4">
-                            <div class="activity-icon bg-red-light text-red">
+                                {% else %}
                                 <i class="ph-bold ph-sign-out"></i>
+                                {% endif %}
                             </div>
                             <div class="activity-details flex-1">
-                                <p class="activity-title">Checked Out</p>
-                                <p class="activity-subtitle">Friday, Oct 20</p>
+                                <p class="activity-title">{{ item.title }}</p>
+                                <p class="activity-subtitle">{{ item.date_label }}</p>
                             </div>
                             <div class="activity-time text-right">
-                                <p class="activity-title">05:30 PM</p>
-                                <p class="activity-subtitle">Duration: 8h 38m</p>
+                                <p class="activity-title">{{ item.time_label }}</p>
+                                <p class="activity-subtitle">{{ item.meta }}</p>
                             </div>
                         </div>
+                        {% if not forloop.last %}
                         <hr class="separator-light">
-                        <!-- Activity Item 3 -->
+                        {% endif %}
+                        {% empty %}
                         <div class="activity-item py-4">
-                            <div class="activity-icon bg-blue-light text-primary">
-                                <i class="ph-bold ph-coffee"></i>
-                            </div>
                             <div class="activity-details flex-1">
-                                <p class="activity-title">Break Logged</p>
-                                <p class="activity-subtitle">Thursday, Oct 19</p>
-                            </div>
-                            <div class="activity-time text-right">
-                                <p class="activity-title">12:15 PM</p>
-                                <p class="activity-subtitle">Lunch (45m)</p>
+                                <p class="activity-title">No recent activity</p>
+                                <p class="activity-subtitle">Check in to start tracking attendance.</p>
                             </div>
                         </div>
+                        {% endfor %}
                     </div>
                 </div>
 
@@ -150,22 +135,25 @@
                         <p class="text-xs uppercase font-semibold letter-spacing-1 opacity-80">THIS WEEK</p>
                         <i class="ph-fill ph-chart-bar text-xl opacity-80"></i>
                     </div>
-                    <h2 class="text-4xl font-bold mb-6">38.5 Hrs</h2>
+                    <h2 class="text-4xl font-bold mb-6">{{ weekly_hours_text }}</h2>
 
                     <div class="flex-between mb-2">
                         <p class="text-xs font-semibold letter-spacing-1">GOAL PROGRESS</p>
-                        <p class="text-sm font-bold">96%</p>
+                        <p class="text-sm font-bold">{{ weekly_progress_pct }}%</p>
                     </div>
                     <div class="progress-bar-bg mb-3">
-                        <div class="progress-bar-fill" style="width: 96%;"></div>
+                        <div class="progress-bar-fill" style="width: {{ weekly_progress_pct }}%;"></div>
                     </div>
-                    <p class="text-xs opacity-80">1.5 hours left to reach your weekly goal.</p>
+                    <p class="text-xs opacity-80">{{ weekly_remaining_text }}</p>
                 </div>
 
                 <!-- Attendance Calendar Card -->
                 <div class="card p-5 mt-4">
                     <div class="flex-between mb-4">
-                        <h2 class="card-title">Attendance Log</h2>
+                        <div>
+                            <h2 class="card-title">Attendance Log</h2>
+                            <p class="text-xs text-gray mt-1" id="calendarMonthLabel">{{ calendar_month_label }}</p>
+                        </div>
                         <div class="flex gap-2">
                             <button class="icon-btn-small"><i class="ph-bold ph-caret-left"></i></button>
                             <button class="icon-btn-small"><i class="ph-bold ph-caret-right"></i></button>
@@ -180,24 +168,9 @@
                         <div class="calendar-header-cell">TH</div>
                         <div class="calendar-header-cell">FR</div>
                         <div class="calendar-header-cell">SA</div>
-
-                        <!-- Row 1 -->
-                        <div class="calendar-cell text-muted">15</div>
-                        <div class="calendar-cell bg-green-light rounded-md font-medium">16</div>
-                        <div class="calendar-cell bg-green-light rounded-md font-medium">17</div>
-                        <div class="calendar-cell bg-green-light rounded-md font-medium">18</div>
-                        <div class="calendar-cell bg-green-light rounded-md font-medium">19</div>
-                        <div class="calendar-cell bg-green-light rounded-md font-medium">20</div>
-                        <div class="calendar-cell text-muted">21</div>
-
-                        <!-- Row 2 -->
-                        <div class="calendar-cell text-muted">22</div>
-                        <div class="calendar-cell bg-primary text-white rounded-md font-bold shadow-sm">23</div>
-                        <div class="calendar-cell">24</div>
-                        <div class="calendar-cell">25</div>
-                        <div class="calendar-cell">26</div>
-                        <div class="calendar-cell">27</div>
-                        <div class="calendar-cell text-muted">28</div>
+                        {% for cell in calendar_cells %}
+                        <div class="{{ cell.classes }}">{{ cell.label }}</div>
+                        {% endfor %}
                     </div>
 
                     <div class="flex flex-col gap-2 mt-4 ml-1">
@@ -219,12 +192,14 @@
                             <i class="ph-fill ph-map-pin"></i>
                         </div>
                         <div>
-                            <p class="card-title mb-0">Registered IP</p>
-                            <p class="text-xs text-gray">192.168.1.105 (Home Office)</p>
+                            <p class="card-title mb-0">Live Location</p>
+                            <p class="text-xs text-gray" id="liveLocationText">Waiting for location…</p>
                         </div>
                     </div>
                     <div class="map-placeholder">
-                        <div class="map-dot"></div>
+                        <div id="mapPreview" style="width: 100%; height: 100%; border-radius: 12px; overflow: hidden; cursor: pointer; background: rgba(0,0,0,0.04); display: flex; align-items: center; justify-content: center;">
+                            <span class="text-xs text-gray">Map will appear when location is available</span>
+                        </div>
                     </div>
                 </div>
 
@@ -279,6 +254,198 @@
 
             updateClock();
             setInterval(updateClock, 1000);
+        })();
+    </script>
+
+    <script>
+        (function () {
+            const textEl = document.getElementById('liveLocationText');
+            if (!textEl) return;
+
+            const mapPreviewEl = document.getElementById('mapPreview');
+            let lastLat = null;
+            let lastLon = null;
+
+            function setText(t) {
+                textEl.textContent = t;
+            }
+
+            function googleEmbedUrl(lat, lon, zoom = 15) {
+                const q = `${lat},${lon}`;
+                return `https://www.google.com/maps?q=${encodeURIComponent(q)}&z=${zoom}&output=embed`;
+            }
+
+            function googleOpenUrl(lat, lon) {
+                const q = `${lat},${lon}`;
+                return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}`;
+            }
+
+            function renderMapPreview(lat, lon) {
+                if (!mapPreviewEl) return;
+                mapPreviewEl.innerHTML = '';
+                const wrapper = document.createElement('div');
+                wrapper.style.position = 'relative';
+                wrapper.style.width = '100%';
+                wrapper.style.height = '100%';
+
+                const iframe = document.createElement('iframe');
+                iframe.src = googleEmbedUrl(lat, lon, 14);
+                iframe.width = '100%';
+                iframe.height = '100%';
+                iframe.style.border = '0';
+                // Prevent the iframe from handling clicks (we want our modal open behavior)
+                iframe.style.pointerEvents = 'none';
+                iframe.loading = 'lazy';
+                iframe.referrerPolicy = 'no-referrer-when-downgrade';
+                // Sandbox to prevent popups/new tabs from the embed
+                iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-forms');
+
+                wrapper.appendChild(iframe);
+                mapPreviewEl.appendChild(wrapper);
+            }
+
+            // Show last sign-in location immediately (if available)
+            try {
+                const raw = localStorage.getItem('lastSigninLocation');
+                if (raw) {
+                    const loc = JSON.parse(raw);
+                    if (loc && typeof loc.lat === 'number' && typeof loc.lon === 'number') {
+                        lastLat = loc.lat;
+                        lastLon = loc.lon;
+                        const acc = typeof loc.accuracy === 'number' ? ` ±${Math.round(loc.accuracy)}m` : '';
+                        setText(`Lat ${loc.lat.toFixed(5)}, Lon ${loc.lon.toFixed(5)}${acc}`);
+                        renderMapPreview(loc.lat, loc.lon);
+                    }
+                }
+            } catch (e) {
+                // ignore
+            }
+
+            if (!navigator.geolocation) {
+                setText('Location not supported on this browser.');
+                return;
+            }
+
+            navigator.geolocation.watchPosition(
+                (pos) => {
+                    const lat = pos.coords.latitude;
+                    const lon = pos.coords.longitude;
+                    const accuracy = pos.coords.accuracy;
+                    lastLat = lat;
+                    lastLon = lon;
+                    setText(`Lat ${lat.toFixed(5)}, Lon ${lon.toFixed(5)} ±${Math.round(accuracy)}m`);
+                    renderMapPreview(lat, lon);
+                },
+                () => {
+                    // Keep last known if we have it; otherwise show message.
+                    if (textEl.textContent === 'Waiting for location…') {
+                        setText('Location permission denied/unavailable.');
+                    }
+                },
+                { enableHighAccuracy: true, maximumAge: 10000, timeout: 8000 }
+            );
+
+            // Click to open a popup modal with a larger map (no new tab)
+            if (mapPreviewEl) {
+                mapPreviewEl.addEventListener('click', () => {
+                    if (typeof lastLat !== 'number' || typeof lastLon !== 'number') return;
+                    const modal = document.getElementById('mapModal');
+                    const modalFrame = document.getElementById('mapModalFrame');
+                    if (!modal || !modalFrame) return;
+                    modalFrame.src = googleEmbedUrl(lastLat, lastLon, 16);
+                    modal.classList.add('open');
+                });
+            }
+        })();
+    </script>
+
+    <style>
+        .map-modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+            z-index: 9999;
+        }
+        .map-modal-overlay.open { display: flex; }
+        .map-modal {
+            width: min(900px, 96vw);
+            background: white;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.25);
+        }
+        .map-modal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 14px 16px;
+            border-bottom: 1px solid rgba(0,0,0,0.08);
+        }
+        .map-modal-title { font-weight: 700; color: #0f172a; font-size: 14px; }
+        .map-modal-actions { display: flex; gap: 10px; align-items: center; }
+        .map-modal-btn {
+            border: 1px solid rgba(0,0,0,0.12);
+            background: white;
+            padding: 8px 10px;
+            border-radius: 10px;
+            font-size: 12px;
+            cursor: pointer;
+        }
+        .map-modal-body { width: 100%; height: min(70vh, 520px); }
+        .map-modal-body iframe { width: 100%; height: 100%; border: 0; }
+
+        .map-modal-close-x {
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            border: 1px solid rgba(0,0,0,0.12);
+            background: white;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+    </style>
+
+    <div class="map-modal-overlay" id="mapModal" aria-hidden="true">
+        <div class="map-modal" role="dialog" aria-modal="true" aria-label="Location map">
+            <div class="map-modal-header">
+                <div class="map-modal-title">Live GPS Location</div>
+                <div class="map-modal-actions">
+                    <button type="button" class="map-modal-close-x" id="mapModalClose" aria-label="Close map">
+                        <i class="ph-bold ph-x"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="map-modal-body">
+                <iframe id="mapModalFrame" loading="lazy" referrerpolicy="no-referrer-when-downgrade" sandbox="allow-scripts allow-same-origin allow-forms"></iframe>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        (function () {
+            const modal = document.getElementById('mapModal');
+            const closeBtn = document.getElementById('mapModalClose');
+            const frame = document.getElementById('mapModalFrame');
+            if (!modal || !closeBtn || !frame) return;
+
+            function close() {
+                modal.classList.remove('open');
+                frame.src = '';
+            }
+
+            closeBtn.addEventListener('click', close);
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) close();
+            });
+            window.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') close();
+            });
         })();
     </script>
 
