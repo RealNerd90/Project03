@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+{% load static %}
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edit Profile - Attendance Portal</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'style.css' %}">
+    <script src="{% static 'theme.js' %}" defer></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+</head>
+
+<body class="bg-gray-lighter">
+    <nav class="navbar dashboard-navbar navbar-border flex-between">
+        <div class="logo">
+            <i class="ph-fill ph-check-square-offset text-primary"></i>
+            <span>Attendance Portal</span>
+        </div>
+
+        <div class="nav-links-center">
+            <a href="{% url 'dashboard' %}" class="nav-link">Dashboard</a>
+            <a href="{% url 'analytics' %}" class="nav-link">Personal Analytics</a>
+            <a href="{% url 'settings' %}" class="nav-link active">Settings</a>
+        </div>
+
+        <div class="nav-right">
+            <button class="icon-btn-rounded mx-2" type="button" aria-label="Notifications">
+                <i class="ph-fill ph-bell"></i>
+            </button>
+            <div class="profile-dropdown" data-profile-dropdown>
+                <button type="button" class="profile-avatar" data-profile-dropdown-trigger aria-haspopup="menu" aria-expanded="false">
+                    {% if profile_photo_url %}
+                        <img src="{{ profile_photo_url }}" alt="Profile">
+                    {% else %}
+                        <img src="{% static 'default-avatar.png' %}" alt="Profile" class="default-avatar-img">
+                    {% endif %}
+                </button>
+
+                <div class="profile-dropdown-menu" data-profile-dropdown-menu role="menu" aria-hidden="true">
+                    <div class="profile-dropdown-header">
+                        <div class="profile-dropdown-avatar">
+                            {% if profile_photo_url %}
+                                <img src="{{ profile_photo_url }}" alt="Profile">
+                            {% else %}
+                                <img src="{% static 'default-avatar.png' %}" alt="Profile" class="default-avatar-img">
+                            {% endif %}
+                        </div>
+                        <div class="profile-dropdown-meta">
+                            <div class="profile-dropdown-name">{{ display_name }}</div>
+                            <div class="profile-dropdown-role">Attendance Portal</div>
+                        </div>
+                    </div>
+
+                    <div class="profile-dropdown-items">
+                        <a class="profile-dropdown-item" href="{% url 'profile' %}" role="menuitem">
+                            <i class="ph-bold ph-user"></i>
+                            <span>View Profile</span>
+                        </a>
+                        <div class="profile-dropdown-sep"></div>
+                        <a class="profile-dropdown-item danger" href="{% url 'logout' %}" role="menuitem">
+                            <i class="ph-bold ph-sign-out"></i>
+                            <span>Logout</span>
+                        </a>
+                    </div>
+
+                    <div class="profile-dropdown-footer">
+                        <span class="profile-dropdown-footer-label">ACTIVE SESSION</span>
+                        <span class="profile-dropdown-status">
+                            <span class="profile-dropdown-dot" aria-hidden="true"></span>
+                            <span>Online</span>
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="edit-profile-page">
+        <div class="edit-profile-card">
+            <header class="edit-profile-header">
+                <div>
+                    <h1 class="edit-profile-title">Edit Profile</h1>
+                    <p class="edit-profile-subtitle">Manage your account settings and set your email preferences.</p>
+                </div>
+            </header>
+
+            <form method="post" class="edit-profile-body">
+                {% csrf_token %}
+
+                <section class="edit-profile-photo-row">
+                    <div class="edit-profile-avatar">
+                        {% if profile_photo_url %}
+                            <img src="{{ profile_photo_url }}" alt="Profile">
+                        {% else %}
+                            <img src="{% static 'default-avatar.png' %}" alt="Profile" class="default-avatar-img">
+                        {% endif %}
+                        <button type="button" class="edit-profile-avatar-btn" aria-label="Change profile photo">
+                            <i class="ph-fill ph-camera"></i>
+                        </button>
+                    </div>
+                    <div class="edit-profile-photo-text">
+                        <div class="edit-profile-photo-title">Profile Photo</div>
+                        <div class="edit-profile-photo-sub">Update your photo and personal details here.</div>
+                    </div>
+                </section>
+
+                <section class="edit-profile-section">
+                    <div class="edit-profile-section-title">
+                        <i class="ph-fill ph-user"></i>
+                        <span>Personal Details</span>
+                    </div>
+
+                    <div class="edit-profile-grid">
+                        <div class="edit-field">
+                            <label class="edit-label" for="full_name">Full Name</label>
+                            <input id="full_name" name="full_name" class="edit-input" type="text" value="{{ full_name }}" readonly>
+                        </div>
+                        <div class="edit-field">
+                            <label class="edit-label" for="email">Email Address</label>
+                            <input id="email" name="email" class="edit-input" type="email" value="{{ email }}" readonly>
+                        </div>
+                        <div class="edit-field">
+                            <label class="edit-label" for="phone">Phone Number</label>
+                            <input id="phone" name="phone" class="edit-input" type="text" value="{{ phone }}">
+                        </div>
+                        <div class="edit-field">
+                            <label class="edit-label" for="dob">Date of Birth</label>
+                            <div class="edit-input-with-icon">
+                                <input id="dob" name="dob" class="edit-input" type="text" value="{{ date_of_birth }}">
+                                <i class="ph-bold ph-calendar-blank"></i>
+                            </div>
+                        </div>
+                        <div class="edit-field">
+                            <label class="edit-label" for="gender">Gender</label>
+                            <select id="gender" name="gender" class="edit-input">
+                                <option value="Male" {% if gender == "Male" %}selected{% endif %}>Male</option>
+                                <option value="Female" {% if gender == "Female" %}selected{% endif %}>Female</option>
+                                <option value="Other" {% if gender == "Other" %}selected{% endif %}>Other</option>
+                            </select>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="edit-profile-section">
+                    <div class="edit-profile-section-title">
+                        <i class="ph-fill ph-identification-badge"></i>
+                        <span>Account Role</span>
+                    </div>
+
+                    <div class="edit-role-grid">
+                        <input type="hidden" name="role" id="roleInput" value="{{ current_role }}">
+
+                        <button type="button" class="edit-role-card{% if current_role == 'student' %} active{% endif %}" data-role="student">
+                            <div class="edit-role-icon">
+                                <i class="ph-fill ph-student"></i>
+                            </div>
+                            <div class="edit-role-title">Student</div>
+                            <div class="edit-role-sub">Access to courses</div>
+                        </button>
+
+                        <button type="button" class="edit-role-card{% if current_role == 'employee' %} active{% endif %}" data-role="employee">
+                            <div class="edit-role-icon">
+                                <i class="ph-fill ph-briefcase"></i>
+                            </div>
+                            <div class="edit-role-title">Employee</div>
+                            <div class="edit-role-sub">Standard portal access</div>
+                        </button>
+
+                        <button type="button" class="edit-role-card{% if current_role == 'teacher' %} active{% endif %}" data-role="teacher">
+                            <div class="edit-role-icon">
+                                <i class="ph-fill ph-chalkboard-teacher"></i>
+                            </div>
+                            <div class="edit-role-title">Teacher</div>
+                            <div class="edit-role-sub">Management tools</div>
+                        </button>
+                    </div>
+                </section>
+
+                <footer class="edit-profile-footer">
+                    <div class="edit-footer-left">
+                        <span class="edit-footer-dot"></span>
+                        <span>Changes to sensitive employment information may require HR approval.</span>
+                    </div>
+                    <div class="edit-footer-actions">
+                        <a href="{% url 'profile' %}" class="btn btn-outline btn-md">Cancel</a>
+                        <button type="submit" class="btn btn-primary btn-md">Save Changes</button>
+                    </div>
+                </footer>
+            </form>
+        </div>
+    </main>
+
+    <script>
+        (function () {
+            const root = document.querySelector('[data-profile-dropdown]');
+            if (!root) return;
+            const trigger = root.querySelector('[data-profile-dropdown-trigger]');
+            const menu = root.querySelector('[data-profile-dropdown-menu]');
+            if (!trigger || !menu) return;
+
+            function setOpen(next) {
+                root.classList.toggle('open', next);
+                trigger.setAttribute('aria-expanded', next ? 'true' : 'false');
+                menu.setAttribute('aria-hidden', next ? 'false' : 'true');
+            }
+
+            function isOpen() {
+                return root.classList.contains('open');
+            }
+
+            trigger.addEventListener('click', (e) => {
+                e.stopPropagation();
+                setOpen(!isOpen());
+            });
+
+            document.addEventListener('click', (e) => {
+                if (!isOpen()) return;
+                if (!root.contains(e.target)) setOpen(false);
+            });
+
+            window.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') setOpen(false);
+            });
+        })();
+
+        (function () {
+            const cards = document.querySelectorAll('.edit-role-card');
+            const input = document.getElementById('roleInput');
+            if (!cards.length || !input) return;
+
+            cards.forEach((card) => {
+                card.addEventListener('click', () => {
+                    const role = card.getAttribute('data-role') || 'employee';
+                    input.value = role;
+                    cards.forEach((c) => c.classList.remove('active'));
+                    card.classList.add('active');
+                });
+            });
+        })();
+    </script>
+</body>
+
+</html>
+

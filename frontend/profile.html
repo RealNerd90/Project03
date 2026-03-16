@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+{% load static %}
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profile - Attendance Portal</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'style.css' %}">
+    <script src="{% static 'theme.js' %}" defer></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+</head>
+
+<body class="bg-gray-lighter">
+    <nav class="navbar dashboard-navbar navbar-border flex-between">
+        <div class="logo">
+            <i class="ph-fill ph-check-square-offset text-primary"></i>
+            <span>Attendance Portal</span>
+        </div>
+
+        <div class="nav-links-center">
+            <a href="{% url 'dashboard' %}" class="nav-link">Dashboard</a>
+            <a href="{% url 'analytics' %}" class="nav-link">Attendance</a>
+            <a href="{% url 'settings' %}" class="nav-link">Settings</a>
+        </div>
+
+        <div class="nav-right">
+            <button class="icon-btn-rounded mx-2" type="button" aria-label="Notifications">
+                <i class="ph-fill ph-bell"></i>
+            </button>
+
+            <div class="profile-dropdown" data-profile-dropdown>
+                <button type="button" class="profile-avatar" data-profile-dropdown-trigger aria-haspopup="menu" aria-expanded="false">
+                    {% if profile_photo_url %}
+                        <img src="{{ profile_photo_url }}" alt="Profile" />
+                    {% else %}
+                        <img src="{% static 'default-avatar.png' %}" alt="Profile" class="default-avatar-img" />
+                    {% endif %}
+                </button>
+
+                <div class="profile-dropdown-menu" data-profile-dropdown-menu role="menu" aria-hidden="true">
+                    <div class="profile-dropdown-header">
+                        <div class="profile-dropdown-avatar">
+                            {% if profile_photo_url %}
+                                <img src="{{ profile_photo_url }}" alt="Profile" />
+                            {% else %}
+                                <img src="{% static 'default-avatar.png' %}" alt="Profile" class="default-avatar-img" />
+                            {% endif %}
+                        </div>
+                        <div class="profile-dropdown-meta">
+                            <div class="profile-dropdown-name">{{ display_name }}</div>
+                            <div class="profile-dropdown-role">Attendance Portal</div>
+                        </div>
+                    </div>
+
+                    <div class="profile-dropdown-items">
+                        <a class="profile-dropdown-item" href="{% url 'profile' %}" role="menuitem">
+                            <i class="ph-bold ph-user"></i>
+                            <span>View Profile</span>
+                        </a>
+                        <div class="profile-dropdown-sep"></div>
+                        <a class="profile-dropdown-item danger" href="{% url 'logout' %}" role="menuitem">
+                            <i class="ph-bold ph-sign-out"></i>
+                            <span>Logout</span>
+                        </a>
+                    </div>
+
+                    <div class="profile-dropdown-footer">
+                        <span class="profile-dropdown-footer-label">ACTIVE SESSION</span>
+                        <span class="profile-dropdown-status">
+                            <span class="profile-dropdown-dot" aria-hidden="true"></span>
+                            <span>Online</span>
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="profile-page">
+        <div class="profile-card">
+            <div class="profile-hero">
+                <div class="profile-avatar-lg">
+                    {% if profile_photo_url %}
+                        <img src="{{ profile_photo_url }}" alt="Profile" />
+                    {% else %}
+                        <img src="{% static 'default-avatar.png' %}" alt="Profile" class="default-avatar-img" />
+                    {% endif %}
+                    <button type="button" class="profile-edit-btn" aria-label="Edit profile photo">
+                        <i class="ph-fill ph-pencil-simple"></i>
+                    </button>
+                </div>
+
+                <div class="profile-hero-text">
+                    <h1 class="profile-name">{{ profile_name }}</h1>
+                    <div class="profile-subline">
+                        <span class="profile-sub">{{ emp_id }}</span>
+                        <span class="profile-dot-sep">•</span>
+                        <span class="profile-sub">{{ role_title }}</span>
+                    </div>
+                    <a href="{% url 'profile-edit' %}" class="profile-main-edit-btn">
+                        <i class="ph-bold ph-pencil-simple"></i>
+                        <span>Edit profile</span>
+                    </a>
+                </div>
+            </div>
+
+            <div class="profile-sections">
+                <section class="profile-section">
+                    <div class="profile-section-title">
+                        <i class="ph-fill ph-user"></i>
+                        <span>Personal Information</span>
+                    </div>
+
+                    <div class="profile-grid">
+                        <div class="profile-field">
+                            <div class="profile-label">FULLNAME</div>
+                            <div class="profile-value">{{ full_name }}</div>
+                        </div>
+                        <div class="profile-field">
+                            <div class="profile-label">DATE OF BIRTH</div>
+                            <div class="profile-value">{{ date_of_birth }}</div>
+                        </div>
+                        <div class="profile-field">
+                            <div class="profile-label">GENDER</div>
+                            <div class="profile-value">{{ gender }}</div>
+                        </div>
+                        <div class="profile-field">
+                            <div class="profile-label">EMAIL ADDRESS</div>
+                            <div class="profile-value">{{ email|default:"—" }}</div>
+                        </div>
+                        <div class="profile-field">
+                            <div class="profile-label">ACCOUNT ROLE</div>
+                            <div class="profile-value">
+                                <span class="profile-role-pill">{{ account_role_label }}</span>
+                                <span class="profile-role-desc">{{ account_role_desc }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </div>
+    </main>
+
+    <footer class="profile-footer">
+        <div class="profile-footer-inner">
+            <span>© 2024 Attendance Portal</span>
+            <span class="profile-footer-sep">•</span>
+            <a href="#">Privacy Policy</a>
+            <span class="profile-footer-sep">•</span>
+            <a href="#">Terms of Service</a>
+        </div>
+    </footer>
+
+    <script>
+        (function () {
+            const root = document.querySelector('[data-profile-dropdown]');
+            if (!root) return;
+            const trigger = root.querySelector('[data-profile-dropdown-trigger]');
+            const menu = root.querySelector('[data-profile-dropdown-menu]');
+            if (!trigger || !menu) return;
+
+            function setOpen(next) {
+                root.classList.toggle('open', next);
+                trigger.setAttribute('aria-expanded', next ? 'true' : 'false');
+                menu.setAttribute('aria-hidden', next ? 'false' : 'true');
+            }
+
+            function isOpen() {
+                return root.classList.contains('open');
+            }
+
+            trigger.addEventListener('click', (e) => {
+                e.stopPropagation();
+                setOpen(!isOpen());
+            });
+
+            document.addEventListener('click', (e) => {
+                if (!isOpen()) return;
+                if (!root.contains(e.target)) setOpen(false);
+            });
+
+            window.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') setOpen(false);
+            });
+        })();
+    </script>
+</body>
+
+</html>
+

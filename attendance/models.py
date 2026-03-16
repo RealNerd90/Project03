@@ -6,6 +6,10 @@ class RegisteredUser(models.Model):
 
     name = models.CharField(max_length=255, unique=True)
     email = models.EmailField(blank=True, default="")
+    phone = models.CharField(max_length=50, blank=True, default="")
+    dob_display = models.CharField(max_length=64, blank=True, default="")
+    gender = models.CharField(max_length=16, blank=True, default="")
+    account_role = models.CharField(max_length=16, blank=True, default="employee")
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

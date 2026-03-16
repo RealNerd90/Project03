@@ -37,6 +37,20 @@ def _normalize_display_name(name: str | None) -> str:
     return mapped or raw
 
 
+def _profile_photo_url_for(display_name: str | None) -> str:
+    safe_name = _normalize_display_name(display_name)
+    if safe_name == "Visitor":
+        return ""
+    profile_photo_folder = os.path.join(
+        os.path.dirname(os.path.dirname(__file__)),
+        "frontend",
+        "profile_photos",
+    )
+    photo_filename = f"{slugify(safe_name)}.jpg"
+    profile_photo_path = os.path.join(profile_photo_folder, photo_filename)
+    return f"/static/profile_photos/{photo_filename}" if os.path.exists(profile_photo_path) else ""
+
+
 def welcome(request: HttpRequest) -> HttpResponse:
     """Landing page based on the welcome UI design."""
     return render(request, "index.html")
@@ -46,6 +60,7 @@ def dashboard(request: HttpRequest) -> HttpResponse:
     """Render the main dashboard using the existing static HTML as a template."""
     today = timezone.localdate()
     display_name = _normalize_display_name(request.session.get("display_name"))
+    profile_photo_url = _profile_photo_url_for(display_name)
 
     # Build a "recent activity" feed from real DB records.
     # We scope everything to the current signed-in name stored in the session,
@@ -192,6 +207,7 @@ def dashboard(request: HttpRequest) -> HttpResponse:
         "dashboard.html",
         {
             "display_name": display_name,
+            "profile_photo_url": profile_photo_url,
             "recent_activity": events[:3],
             "weekly_hours_text": weekly_hours_text,
             "weekly_progress_pct": progress_pct,
@@ -206,6 +222,7 @@ def analytics(request: HttpRequest) -> HttpResponse:
     """Render the analytics page."""
     # Load recent attendance entries for the current signed-in person only.
     display_name = _normalize_display_name(request.session.get("display_name"))
+    profile_photo_url = _profile_photo_url_for(display_name)
     if display_name == "Visitor":
         attendance_records = AttendanceRecord.objects.none()
     else:
@@ -214,7 +231,150 @@ def analytics(request: HttpRequest) -> HttpResponse:
             .order_by("-date", "-time")[:50]
         )
 
-    return render(request, "analytics.html", {"attendance_records": attendance_records})
+    return render(
+        request,
+        "analytics.html",
+        {
+            "attendance_records": attendance_records,
+            "profile_photo_url": profile_photo_url,
+            "display_name": display_name,
+        },
+    )
+
+
+def logout_view(request: HttpRequest) -> HttpResponse:
+    """End the current session and return to welcome."""
+    try:
+        request.session.flush()
+    except Exception:
+        request.session.clear()
+    return redirect("welcome")
+
+
+def profile_view(request: HttpRequest) -> HttpResponse:
+    """Render the profile page based on the provided UI design."""
+    display_name = _normalize_display_name(request.session.get("display_name"))
+    profile_photo_url = _profile_photo_url_for(display_name)
+
+    user = None
+    email = ""
+    phone = ""
+    dob_display = ""
+    gender = ""
+    role_key = request.session.get("account_role", "employee")
+    if display_name != "Visitor":
+        user, _ = RegisteredUser.objects.get_or_create(name=display_name)
+        email = user.email or ""
+        phone = user.phone or ""
+        dob_display = user.dob_display or ""
+        gender = user.gender or ""
+        if user.account_role:
+            role_key = user.account_role
+
+    # Deterministic employee id for display only.
+    try:
+        emp_id = f"EMP-{abs(hash(display_name)) % 9000 + 1000}"
+    except Exception:
+        emp_id = "EMP-1234"
+
+    # Account role is stored in the session (simple front-end preference).
+    role_key = role_key or "employee"
+    role_map = {
+        "student": ("Student", "Access to courses"),
+        "employee": ("Employee", "Standard portal access"),
+        "teacher": ("Teacher", "Management tools"),
+    }
+    role_label, role_desc = role_map.get(role_key, role_map["employee"])
+
+    # Date of birth is stored as a display string in the session.
+    dob_display = dob_display or request.session.get("profile_dob_display") or "October 24, 1992"
+    gender = gender or "Male"
+    phone = phone or "+1 (555) 000-1234"
+
+    # The design is mostly static; we provide sensible defaults.
+    return render(
+        request,
+        "profile.html",
+        {
+            "display_name": display_name,
+            "profile_photo_url": profile_photo_url,
+            "profile_name": display_name,
+            "emp_id": emp_id,
+            "role_title": "Senior Product Designer",
+            "full_name": display_name,
+            "date_of_birth": dob_display,
+            "gender": gender,
+            "email": email,
+            "phone": phone,
+            "account_role_label": role_label,
+            "account_role_desc": role_desc,
+        },
+    )
+
+
+def profile_edit_view(request: HttpRequest) -> HttpResponse:
+    """Render the edit profile form page."""
+    display_name = _normalize_display_name(request.session.get("display_name"))
+    profile_photo_url = _profile_photo_url_for(display_name)
+
+    user = None
+    email = ""
+    phone = ""
+    dob_display = ""
+    gender = ""
+    if display_name != "Visitor":
+        user, _ = RegisteredUser.objects.get_or_create(name=display_name)
+        email = user.email or ""
+        phone = user.phone or ""
+        dob_display = user.dob_display or ""
+        gender = user.gender or ""
+
+    if request.method == "POST":
+        full_name = (request.POST.get("full_name") or display_name).strip()
+        email_val = (request.POST.get("email") or "").strip()
+        dob_val = (request.POST.get("dob") or "").strip()
+        gender_val = (request.POST.get("gender") or "").strip()
+        role_key = (request.POST.get("role") or "employee").strip().lower()
+        if role_key not in {"student", "employee", "teacher"}:
+            role_key = "employee"
+
+        # Persist name/email into the registry if possible.
+        if user and full_name and full_name != "Visitor":
+            # Name/email are fixed; we do not mutate them here.
+            if dob_val:
+                user.dob_display = dob_val
+            if gender_val:
+                user.gender = gender_val
+            if phone:
+                user.phone = phone
+            if email_val:
+                # Only fill email if it's empty today.
+                if not user.email:
+                    user.email = email_val
+            user.account_role = role_key
+            user.save()
+
+        # Store account role preference and DOB in the session.
+        request.session["account_role"] = role_key
+        if dob_val:
+            request.session["profile_dob_display"] = dob_val
+
+        return redirect("profile")
+
+    current_role = (user.account_role if user and user.account_role else None) or request.session.get("account_role", "employee")
+    dob_display = dob_display or request.session.get("profile_dob_display") or "05/15/1992"
+    context = {
+        "display_name": display_name,
+        "profile_photo_url": profile_photo_url,
+        "full_name": display_name,
+        "email": email or "alex.henderson@company.com",
+        "phone": phone or "+1 (555) 000-1234",
+        "date_of_birth": dob_display,
+        "gender": gender or "Male",
+        "current_role": current_role,
+    }
+
+    return render(request, "profile_edit.html", context)
 
 
 def settings_view(request: HttpRequest) -> HttpResponse:
@@ -294,7 +454,12 @@ def settings_view(request: HttpRequest) -> HttpResponse:
 
 def scanner(request: HttpRequest) -> HttpResponse:
     """Render the face scanner page."""
-    return render(request, "scanner.html")
+    display_name = _normalize_display_name(request.session.get("display_name"))
+    return render(
+        request,
+        "scanner.html",
+        {"profile_photo_url": _profile_photo_url_for(display_name)},
+    )
 
 
 def signin(request: HttpRequest) -> HttpResponse:
@@ -332,6 +497,19 @@ def signin_success(request: HttpRequest) -> HttpResponse:
     # Persist name for dashboard greeting (no full auth yet).
     request.session["display_name"] = name
 
+    # Account role from database (fallback: employee).
+    role_key = "employee"
+    if name != "Visitor":
+        user, _ = RegisteredUser.objects.get_or_create(name=name)
+        if user.account_role:
+            role_key = user.account_role
+    role_map = {
+        "student": ("Student", "Access to courses"),
+        "employee": ("Employee", "Standard portal access"),
+        "teacher": ("Teacher", "Management tools"),
+    }
+    account_role_label, account_role_desc = role_map.get(role_key, role_map["employee"])
+
     context = {
         "name": name,
         "date": date_str,
@@ -340,8 +518,53 @@ def signin_success(request: HttpRequest) -> HttpResponse:
         "lat": lat,
         "lon": lon,
         "acc": acc,
+        "account_role_label": account_role_label,
+        "account_role_desc": account_role_desc,
     }
     return render(request, "signin_success.html", context)
+
+
+def attendance_success(request: HttpRequest) -> HttpResponse:
+    """
+    Render a success page after a check-in / check-out scan.
+    Expects query params: name, action ('checkin'|'checkout'), date, time.
+    """
+    name = _normalize_display_name(request.GET.get("name", "Visitor"))
+    action = (request.GET.get("action") or "").strip().lower()
+    if action not in {"checkin", "checkout"}:
+        action = "checkin"
+
+    now = datetime.now()
+    date_str = request.GET.get("date") or now.strftime("%B %d, %Y")
+    time_str = request.GET.get("time") or now.strftime("%I:%M:%S %p")
+
+    # Keep name in session for the rest of the app.
+    request.session["display_name"] = name
+
+    role_key = "employee"
+    if name != "Visitor":
+        user, _ = RegisteredUser.objects.get_or_create(name=name)
+        if user.account_role:
+            role_key = user.account_role
+    role_map = {
+        "student": ("Student", "Access to courses"),
+        "employee": ("Employee", "Standard portal access"),
+        "teacher": ("Teacher", "Management tools"),
+    }
+    account_role_label, account_role_desc = role_map.get(role_key, role_map["employee"])
+
+    return render(
+        request,
+        "attendance_success.html",
+        {
+            "name": name,
+            "action": action,
+            "date": date_str,
+            "time": time_str,
+            "account_role_label": account_role_label,
+            "account_role_desc": account_role_desc,
+        },
+    )
 
 
 @require_POST

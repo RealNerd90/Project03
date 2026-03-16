@@ -5,7 +5,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sign In Successful - AttendancePro</title>
+    <title>Attendance Successful - AttendancePro</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -36,13 +36,20 @@
                 </div>
             </div>
 
-            <h1 class="success-title">Identification Successful!</h1>
-            <p class="success-subtitle">You have been signed in successfully.</p>
+            <h1 class="success-title">
+                {% if action == 'checkout' %}
+                    Check-Out Successful!
+                {% else %}
+                    Check-In Successful!
+                {% endif %}
+            </h1>
+            <p class="success-subtitle">
+                Your attendance has been recorded.
+            </p>
 
             <div class="success-profile">
                 <div class="success-user">
                     <p class="success-name">{{ name }}</p>
-                    <p class="success-id">ID: <span>{{ user_id }}</span></p>
                     <p class="success-role">{{ account_role_label }} • {{ account_role_desc }}</p>
                 </div>
             </div>
@@ -54,8 +61,14 @@
                     <div class="attendance-value">{{ date }}</div>
                 </div>
                 <div class="attendance-row">
-                    <div class="attendance-label"><i class="ph-fill ph-clock"></i> Check-in Time</div>
+                    <div class="attendance-label"><i class="ph-fill ph-clock"></i> Time</div>
                     <div class="attendance-value">{{ time }}</div>
+                </div>
+                <div class="attendance-row">
+                    <div class="attendance-label"><i class="ph-fill ph-scan-smiley"></i> Action</div>
+                    <div class="attendance-value">
+                        {% if action == 'checkout' %}Check Out{% else %}Check In{% endif %}
+                    </div>
                 </div>
             </div>
 
@@ -87,3 +100,4 @@
 </body>
 
 </html>
+

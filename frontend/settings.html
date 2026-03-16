@@ -12,6 +12,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <!-- CSS -->
     <link rel="stylesheet" href="{% static 'style.css' %}">
+    <script src="{% static 'theme.js' %}"></script>
     <!-- Phosphor Icons -->
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
 </head>
@@ -34,8 +35,50 @@
             <button class="icon-btn-rounded mx-2">
                 <i class="ph-fill ph-bell"></i>
             </button>
-            <div class="profile-avatar">
-                <img src="https://i.pravatar.cc/150?img=11" alt="Profile">
+            <div class="profile-dropdown" data-profile-dropdown>
+                <button type="button" class="profile-avatar" data-profile-dropdown-trigger aria-haspopup="menu" aria-expanded="false">
+                    {% if profile_photo_url %}
+                        <img src="{{ profile_photo_url }}" alt="Profile">
+                    {% else %}
+                        <img src="{% static 'default-avatar.png' %}" alt="Profile" class="default-avatar-img">
+                    {% endif %}
+                </button>
+
+                <div class="profile-dropdown-menu" data-profile-dropdown-menu role="menu" aria-hidden="true">
+                    <div class="profile-dropdown-header">
+                        <div class="profile-dropdown-avatar">
+                            {% if profile_photo_url %}
+                                <img src="{{ profile_photo_url }}" alt="Profile">
+                            {% else %}
+                                <img src="{% static 'default-avatar.png' %}" alt="Profile" class="default-avatar-img">
+                            {% endif %}
+                        </div>
+                        <div class="profile-dropdown-meta">
+                            <div class="profile-dropdown-name">{{ display_name }}</div>
+                            <div class="profile-dropdown-role">Attendance Portal</div>
+                        </div>
+                    </div>
+
+                    <div class="profile-dropdown-items">
+                        <a class="profile-dropdown-item" href="{% url 'profile' %}" role="menuitem">
+                            <i class="ph-bold ph-user"></i>
+                            <span>View Profile</span>
+                        </a>
+                        <div class="profile-dropdown-sep"></div>
+                        <a class="profile-dropdown-item danger" href="{% url 'logout' %}" role="menuitem">
+                            <i class="ph-bold ph-sign-out"></i>
+                            <span>Logout</span>
+                        </a>
+                    </div>
+
+                    <div class="profile-dropdown-footer">
+                        <span class="profile-dropdown-footer-label">ACTIVE SESSION</span>
+                        <span class="profile-dropdown-status">
+                            <span class="profile-dropdown-dot" aria-hidden="true"></span>
+                            <span>Online</span>
+                        </span>
+                    </div>
+                </div>
             </div>
         </div>
     </nav>
@@ -49,34 +92,6 @@
             </div>
 
             <div class="card border-none shadow-sm overflow-hidden">
-                <!-- Profile Management -->
-                <section class="settings-section p-10 border-b">
-                    <h2 class="section-title-dark mb-8">Profile Management</h2>
-                    <div class="flex items-center gap-6">
-                        <div class="profile-edit-avatar relative w-32 h-32 flex-shrink-0">
-                            <img src="{% if profile_photo_url %}{{ profile_photo_url }}{% else %}{% static 'default-avatar.svg' %}{% endif %}" alt="{{ display_name }}" class="w-full h-full rounded-full object-cover shadow-md">
-                        </div>
-                        <div class="flex-1">
-                            <h3 class="text-xl font-bold text-dark">{{ display_name }}</h3>
-                            <p class="text-sm text-gray mb-4">Face ID User • AttendancePro</p>
-                            <div class="flex gap-2 flex-wrap">
-                                <form id="uploadPhotoForm" method="post" enctype="multipart/form-data" class="flex gap-2">
-                                    {% csrf_token %}
-                                    <input type="hidden" name="action" value="upload_profile_photo">
-                                    <input id="profilePhotoInput" type="file" name="profile_photo" accept="image/*" hidden>
-                                    <button type="button" id="changeProfilePhoto" class="btn btn-outline btn-sm">Change Profile Photo</button>
-                                    <button type="submit" class="btn btn-primary btn-sm">Upload</button>
-                                </form>
-                                <form method="post" class="flex">
-                                    {% csrf_token %}
-                                    <input type="hidden" name="action" value="remove_profile_photo">
-                                    <button type="submit" class="btn btn-outline-red btn-sm">Remove Photo</button>
-                                </form>
-                            </div>
-                        </div>
-                    </div>
-                </section>
-
                 <!-- Notification Preferences -->
                 <section class="settings-section p-10 border-b">
                     <h2 class="section-title-dark mb-8">Notification Preferences</h2>
@@ -147,7 +162,8 @@
                     <div class="grid grid-cols-3 gap-6">
                         <!-- System Default -->
                         <div
-                            class="appearance-card p-4 border rounded-xl flex flex-col gap-4 cursor-pointer transition-all hover:border-primary">
+                            class="appearance-card p-4 border rounded-xl flex flex-col gap-4 cursor-pointer transition-all hover:border-primary"
+                            data-theme-option="system">
                             <div
                                 class="appearance-preview bg-gray-lighter rounded-lg h-24 flex items-center justify-center text-light">
                                 <i class="ph-bold ph-monitor text-2xl"></i>
@@ -159,7 +175,8 @@
                         </div>
                         <!-- Light Mode -->
                         <div
-                            class="appearance-card active p-4 border rounded-xl flex flex-col gap-4 cursor-pointer transition-all">
+                            class="appearance-card active p-4 border rounded-xl flex flex-col gap-4 cursor-pointer transition-all"
+                            data-theme-option="light">
                             <div
                                 class="appearance-preview bg-white rounded-lg h-24 flex items-center justify-center text-primary shadow-sm border">
                                 <i class="ph-bold ph-sun text-2xl"></i>
@@ -174,7 +191,8 @@
                         </div>
                         <!-- Dark Mode -->
                         <div
-                            class="appearance-card dark-mode-card p-4 border rounded-xl flex flex-col gap-4 cursor-pointer transition-all hover:border-primary">
+                            class="appearance-card dark-mode-card p-4 border rounded-xl flex flex-col gap-4 cursor-pointer transition-all hover:border-primary"
+                            data-theme-option="dark">
                             <div
                                 class="appearance-preview bg-dark-card rounded-lg h-24 flex items-center justify-center text-light">
                                 <i class="ph-bold ph-moon text-2xl"></i>
@@ -209,9 +227,9 @@
                         <h2 class="text-base font-semibold text-dark mb-1">Account Actions</h2>
                         <p class="text-sm text-gray">Sign out of your session on this device.</p>
                     </div>
-                    <button class="btn btn-outline-red gap-2 px-8">
+                    <a class="btn btn-outline-red gap-2 px-8" href="{% url 'logout' %}">
                         <i class="ph-bold ph-sign-out"></i> Logout
-                    </button>
+                    </a>
                 </section>
             </div>
         </div>
@@ -232,8 +250,6 @@
         const soundSelect = document.getElementById('notificationSoundSelect');
         const playBtn = document.getElementById('playSoundBtn');
         const soundPlayer = document.getElementById('notificationSoundPlayer');
-        const changeProfilePhoto = document.getElementById('changeProfilePhoto');
-        const profilePhotoInput = document.getElementById('profilePhotoInput');
 
         function updateAudioSource() {
             if (!soundSelect || !soundPlayer) return;
@@ -265,12 +281,6 @@
             });
         }
 
-        if (changeProfilePhoto && profilePhotoInput) {
-            changeProfilePhoto.addEventListener('click', () => {
-                profilePhotoInput.click();
-            });
-        }
-
         // If localStorage has selection, apply it.
         window.addEventListener('DOMContentLoaded', () => {
             if (!soundSelect) return;
@@ -282,6 +292,98 @@
                 }
             }
             updateAudioSource();
+        });
+    </script>
+
+    <script>
+        (function () {
+            const root = document.querySelector('[data-profile-dropdown]');
+            if (!root) return;
+            const trigger = root.querySelector('[data-profile-dropdown-trigger]');
+            const menu = root.querySelector('[data-profile-dropdown-menu]');
+            if (!trigger || !menu) return;
+
+            function setOpen(next) {
+                root.classList.toggle('open', next);
+                trigger.setAttribute('aria-expanded', next ? 'true' : 'false');
+                menu.setAttribute('aria-hidden', next ? 'false' : 'true');
+            }
+
+            function isOpen() {
+                return root.classList.contains('open');
+            }
+
+            trigger.addEventListener('click', (e) => {
+                e.stopPropagation();
+                setOpen(!isOpen());
+            });
+
+            document.addEventListener('click', (e) => {
+                if (!isOpen()) return;
+                if (!root.contains(e.target)) setOpen(false);
+            });
+
+            window.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') setOpen(false);
+            });
+        })();
+    </script>
+
+    <script>
+        window.addEventListener('DOMContentLoaded', () => {
+            const cards = document.querySelectorAll('[data-theme-option]');
+            if (!cards.length) return;
+
+            function ensureThemeReady(triesLeft = 20) {
+                if (window.Theme) return true;
+                if (triesLeft <= 0) return false;
+                setTimeout(() => ensureThemeReady(triesLeft - 1), 50);
+                return false;
+            }
+
+            function renderActive(pref) {
+                cards.forEach((c) => {
+                    const opt = (c.getAttribute('data-theme-option') || 'system');
+                    const isActive = opt === pref;
+                    c.classList.toggle('active', isActive);
+
+                    // Only the Light card has a built-in check icon in markup.
+                    // We'll toggle it there for consistency.
+                    const hasCheck = !!c.querySelector('.ph-check-circle');
+                    if (opt === 'light') {
+                        const right = c.querySelector('.flex-between');
+                        if (right) {
+                            const existing = right.querySelector('.ph-check-circle');
+                            if (isActive && !existing) {
+                                const i = document.createElement('i');
+                                i.className = 'ph-fill ph-check-circle text-primary text-xl';
+                                right.appendChild(i);
+                            }
+                            if (!isActive && existing) existing.remove();
+                        }
+                    } else if (hasCheck) {
+                        // Remove any accidental check icons from other cards
+                        const icon = c.querySelector('.ph-check-circle');
+                        if (icon) icon.remove();
+                    }
+                });
+            }
+
+            if (!ensureThemeReady()) return;
+
+            renderActive(window.Theme.getPreference());
+
+            cards.forEach((card) => {
+                card.addEventListener('click', () => {
+                    const opt = card.getAttribute('data-theme-option') || 'system';
+                    window.Theme.setPreference(opt);
+                });
+            });
+
+            window.addEventListener('themechange', (e) => {
+                const pref = (e.detail && e.detail.pref) || window.Theme.getPreference();
+                renderActive(pref);
+            });
         });
     </script>
 

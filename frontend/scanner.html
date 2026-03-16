@@ -12,6 +12,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <!-- CSS -->
     <link rel="stylesheet" href="{% static 'style.css' %}">
+    <script src="{% static 'theme.js' %}" defer></script>
     <!-- Phosphor Icons -->
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
 </head>
@@ -29,7 +30,11 @@
                 <i class="ph-fill ph-bell"></i>
             </button>
             <div class="profile-avatar">
-                <img src="{% static 'default-avatar.svg' %}" alt="Profile" />
+                {% if profile_photo_url %}
+                    <img src="{{ profile_photo_url }}" alt="Profile" />
+                {% else %}
+                    <img src="{% static 'default-avatar.png' %}" alt="Profile" class="default-avatar-img" />
+                {% endif %}
             </div>
         </div>
     </nav>
@@ -175,8 +180,17 @@
                     if (scanInterval) clearInterval(scanInterval);
 
                     setTimeout(() => {
-                        window.location.href = '{% url "dashboard" %}';
-                    }, 900);
+                        const timestamp = result.timestamp ? new Date(result.timestamp) : new Date();
+                        const date = timestamp.toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
+                        const time = timestamp.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                        const params = new URLSearchParams({
+                            name: result.name || '',
+                            action: isCheckout ? 'checkout' : 'checkin',
+                            date,
+                            time,
+                        });
+                        window.location.href = '{% url "attendance-success" %}?' + params.toString();
+                    }, 650);
                     return;
                 }
 

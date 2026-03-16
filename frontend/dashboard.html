@@ -12,6 +12,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <!-- CSS -->
     <link rel="stylesheet" href="{% static 'style.css' %}">
+    <script src="{% static 'theme.js' %}" defer></script>
     <!-- Phosphor Icons -->
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
 </head>
@@ -33,8 +34,50 @@
             <button class="icon-btn-rounded mx-2">
                 <i class="ph-fill ph-bell"></i>
             </button>
-            <div class="profile-avatar">
-                <img src="{% static 'default-avatar.svg' %}" alt="Profile" />
+            <div class="profile-dropdown" data-profile-dropdown>
+                <button type="button" class="profile-avatar" data-profile-dropdown-trigger aria-haspopup="menu" aria-expanded="false">
+                    {% if profile_photo_url %}
+                        <img src="{{ profile_photo_url }}" alt="Profile" />
+                    {% else %}
+                        <img src="{% static 'default-avatar.png' %}" alt="Profile" class="default-avatar-img" />
+                    {% endif %}
+                </button>
+
+                <div class="profile-dropdown-menu" data-profile-dropdown-menu role="menu" aria-hidden="true">
+                    <div class="profile-dropdown-header">
+                        <div class="profile-dropdown-avatar">
+                            {% if profile_photo_url %}
+                                <img src="{{ profile_photo_url }}" alt="Profile" />
+                            {% else %}
+                                <img src="{% static 'default-avatar.png' %}" alt="Profile" class="default-avatar-img" />
+                            {% endif %}
+                        </div>
+                        <div class="profile-dropdown-meta">
+                            <div class="profile-dropdown-name">{{ display_name }}</div>
+                            <div class="profile-dropdown-role">Attendance Portal</div>
+                        </div>
+                    </div>
+
+                    <div class="profile-dropdown-items">
+                        <a class="profile-dropdown-item" href="{% url 'profile' %}" role="menuitem">
+                            <i class="ph-bold ph-user"></i>
+                            <span>View Profile</span>
+                        </a>
+                        <div class="profile-dropdown-sep"></div>
+                        <a class="profile-dropdown-item danger" href="{% url 'logout' %}" role="menuitem">
+                            <i class="ph-bold ph-sign-out"></i>
+                            <span>Logout</span>
+                        </a>
+                    </div>
+
+                    <div class="profile-dropdown-footer">
+                        <span class="profile-dropdown-footer-label">ACTIVE SESSION</span>
+                        <span class="profile-dropdown-status">
+                            <span class="profile-dropdown-dot" aria-hidden="true"></span>
+                            <span>Online</span>
+                        </span>
+                    </div>
+                </div>
             </div>
         </div>
     </nav>
@@ -254,6 +297,40 @@
 
             updateClock();
             setInterval(updateClock, 1000);
+        })();
+    </script>
+
+    <script>
+        (function () {
+            const root = document.querySelector('[data-profile-dropdown]');
+            if (!root) return;
+            const trigger = root.querySelector('[data-profile-dropdown-trigger]');
+            const menu = root.querySelector('[data-profile-dropdown-menu]');
+            if (!trigger || !menu) return;
+
+            function setOpen(next) {
+                root.classList.toggle('open', next);
+                trigger.setAttribute('aria-expanded', next ? 'true' : 'false');
+                menu.setAttribute('aria-hidden', next ? 'false' : 'true');
+            }
+
+            function isOpen() {
+                return root.classList.contains('open');
+            }
+
+            trigger.addEventListener('click', (e) => {
+                e.stopPropagation();
+                setOpen(!isOpen());
+            });
+
+            document.addEventListener('click', (e) => {
+                if (!isOpen()) return;
+                if (!root.contains(e.target)) setOpen(false);
+            });
+
+            window.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') setOpen(false);
+            });
         })();
     </script>
 
