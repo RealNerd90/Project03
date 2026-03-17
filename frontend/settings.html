@@ -65,10 +65,10 @@
                             <span>View Profile</span>
                         </a>
                         <div class="profile-dropdown-sep"></div>
-                        <a class="profile-dropdown-item danger" href="{% url 'logout' %}" role="menuitem">
+                        <button type="button" class="profile-dropdown-item danger" data-open-logout role="menuitem">
                             <i class="ph-bold ph-sign-out"></i>
                             <span>Logout</span>
-                        </a>
+                        </button>
                     </div>
 
                     <div class="profile-dropdown-footer">
@@ -82,6 +82,29 @@
             </div>
         </div>
     </nav>
+
+    <div class="logout-confirm-overlay" id="logoutConfirm" aria-hidden="true">
+        <div class="logout-confirm-card" role="dialog" aria-modal="true" aria-label="Confirm Logout">
+            <div class="logout-confirm-icon">
+                <i class="ph-bold ph-sign-out"></i>
+            </div>
+            <h1 class="logout-confirm-title">Confirm Logout</h1>
+            <p class="logout-confirm-subtitle">
+                Are you sure you want to log out of your account? You will need to log back in to access your attendance dashboard.
+            </p>
+
+            <form method="post" action="{% url 'logout' %}" class="logout-confirm-actions">
+                {% csrf_token %}
+                <button type="submit" class="btn logout-btn-danger w-full">Logout</button>
+                <button type="button" class="btn logout-btn-cancel w-full" data-close-logout>Cancel</button>
+            </form>
+
+            <div class="logout-confirm-foot">
+                <i class="ph-bold ph-shield-check"></i>
+                <span>Secure session management</span>
+            </div>
+        </div>
+    </div>
 
     <main class="settings-wrapper py-12 pb-16">
         <div class="container max-w-6xl">
@@ -221,16 +244,6 @@
                             address.</p>                            <p class="text-xs text-green mt-1" id="profileMessage" style="display:none;"></p>                    </div>
                 </section>
 
-                <!-- Account Actions -->
-                <section class="settings-section p-10 flex-between">
-                    <div>
-                        <h2 class="text-base font-semibold text-dark mb-1">Account Actions</h2>
-                        <p class="text-sm text-gray">Sign out of your session on this device.</p>
-                    </div>
-                    <a class="btn btn-outline-red gap-2 px-8" href="{% url 'logout' %}">
-                        <i class="ph-bold ph-sign-out"></i> Logout
-                    </a>
-                </section>
             </div>
         </div>
     </main>
@@ -325,6 +338,34 @@
 
             window.addEventListener('keydown', (e) => {
                 if (e.key === 'Escape') setOpen(false);
+            });
+        })();
+    </script>
+
+    <script>
+        (function () {
+            const overlay = document.getElementById('logoutConfirm');
+            if (!overlay) return;
+            const openBtn = document.querySelector('[data-open-logout]');
+            const closeBtn = overlay.querySelector('[data-close-logout]');
+            if (!openBtn || !closeBtn) return;
+
+            function open() {
+                overlay.classList.add('open');
+                overlay.setAttribute('aria-hidden', 'false');
+            }
+            function close() {
+                overlay.classList.remove('open');
+                overlay.setAttribute('aria-hidden', 'true');
+            }
+
+            openBtn.addEventListener('click', () => open());
+            closeBtn.addEventListener('click', () => close());
+            overlay.addEventListener('click', (e) => {
+                if (e.target === overlay) close();
+            });
+            window.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') close();
             });
         })();
     </script>

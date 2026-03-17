@@ -17,7 +17,7 @@
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
 </head>
 
-<body class="bg-gray-light">
+<body class="bg-gray-light no-scroll">
     <!-- Navbar (simplified for sign in page) -->
     <nav class="navbar navbar-border">
         <div class="logo">
@@ -52,7 +52,14 @@
                     </div>
                 </div>
             </div>
-
+            <div class="enroll-guide" aria-hidden="true">
+                <div class="enroll-guide-pill">
+                    <span class="enroll-guide-step" id="enrollStepPill">1/5</span>
+                    <span class="enroll-guide-text" id="enrollGuideText">Look straight at the camera</span>
+                </div>
+            </div>
+            <p id="registerMessage" class="registration-message" aria-live="polite"></p>
+            <hr class="divider-line">
             <form id="registrationForm" class="enrollment-form" method="post" action="{% url 'register-face' %}">
                 {% csrf_token %}
                 <div class="form-row">
@@ -74,14 +81,21 @@
 
                 <div class="enrollment-action-row">
                     <button type="submit" class="btn btn-primary capture-btn">
-                        <i class="ph-fill ph-camera"></i> Capture & Register
+                        <i class="ph-fill ph-camera"></i> Capture
                     </button>
                     <button id="cancelRegister" type="button" class="btn btn-outline cancel-btn" style="display:none;">
                         <i class="ph-fill ph-x-circle"></i> Cancel
                     </button>
                 </div>
-                <p id="registerMessage" class="text-sm" style="margin-top:0.65rem; min-height:1.1rem;"></p>
             </form>
+
+            <div class="enroll-progress" aria-hidden="true" id="enrollProgress">
+                <span class="enroll-dot active"></span>
+                <span class="enroll-dot"></span>
+                <span class="enroll-dot"></span>
+                <span class="enroll-dot"></span>
+                <span class="enroll-dot"></span>
+            </div>
 
             <div class="security-info">
                 <i class="ph-fill ph-shield-check"></i> Encrypted biometric data processing
@@ -102,8 +116,6 @@
             <div class="already-registered">
                 Already registered? <a href="{% url 'signin' %}" class="link-primary">Sign In</a>
             </div>
-
-            <div class="card-bottom-bar"></div>
         </div>
     </main>
 
@@ -117,6 +129,33 @@
         const form = document.getElementById('registrationForm');
         const cancelBtn = document.getElementById('cancelRegister');
         let currentStream = null;
+        const guideTextEl = document.getElementById('enrollGuideText');
+        const stepPillEl = document.getElementById('enrollStepPill');
+        const progressEl = document.getElementById('enrollProgress');
+        const captureBtn = form.querySelector('button[type=\"submit\"]');
+
+        const steps = [
+            { key: 'front', text: 'Look straight at the camera' },
+            { key: 'left', text: 'Turn your face LEFT' },
+            { key: 'right', text: 'Turn your face RIGHT' },
+            { key: 'up', text: 'Move your face UP' },
+            { key: 'down', text: 'Move your face DOWN' },
+        ];
+        let stepIndex = 0;
+
+        function renderStep() {
+            const s = steps[stepIndex] || steps[0];
+            if (guideTextEl) guideTextEl.textContent = s.text;
+            if (stepPillEl) stepPillEl.textContent = `${stepIndex + 1}/${steps.length}`;
+            if (captureBtn) captureBtn.innerHTML = `<i class=\"ph-fill ph-camera\"></i> Capture ${stepIndex + 1}/${steps.length}`;
+            if (progressEl) {
+                const dots = [...progressEl.querySelectorAll('.enroll-dot')];
+                dots.forEach((d, i) => {
+                    d.classList.toggle('done', i < stepIndex);
+                    d.classList.toggle('active', i === stepIndex);
+                });
+            }
+        }
 
         function setMessage(text, type = 'info') {
             message.textContent = text;
@@ -164,6 +203,8 @@
             event.preventDefault();
             const nameInput = document.getElementById('fullName');
             const fullName = nameInput.value.trim();
+            const emailInput = document.getElementById('email');
+            const email = (emailInput && emailInput.value ? emailInput.value.trim() : '');
             if (!fullName) {
                 setMessage('Please enter your full name.', 'error');
                 return;
@@ -174,7 +215,8 @@
                 return;
             }
 
-            setMessage('Capturing image and registering...', 'info');
+            const s = steps[stepIndex] || steps[0];
+            setMessage(`Capturing (${s.key.toUpperCase()})...`, 'info');
             const imageData = captureFrameDataUrl();
 
             try {
@@ -184,14 +226,18 @@
                         'Content-Type': 'application/json',
                         'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
                     },
-                    body: JSON.stringify({ fullName, image: imageData }),
+                    body: JSON.stringify({ fullName, email, direction: s.key, image: imageData }),
                 });
                 const result = await response.json();
                 if (result.success) {
-                    setMessage(result.message || `Successfully registered ${fullName}.`, 'success');
-                    setTimeout(() => {
-                        window.location.href = '{% url "signin" %}';
-                    }, 1300);
+                    setMessage(result.message || `Captured ${s.key}.`, 'success');
+                    stepIndex += 1;
+                    if (stepIndex >= steps.length) {
+                        setMessage(`Successfully registered ${fullName}.`, 'success');
+                        setTimeout(() => window.location.href = '{% url "signin" %}', 1100);
+                        return;
+                    }
+                    renderStep();
                 } else {
                     setMessage(result.error || result.message || 'Registration failed. Please try again.', 'error');
                 }
@@ -206,6 +252,7 @@
         });
 
         startRegisterCamera();
+        renderStep();
     </script>
 </body>
 

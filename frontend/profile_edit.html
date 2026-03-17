@@ -61,10 +61,10 @@
                             <span>View Profile</span>
                         </a>
                         <div class="profile-dropdown-sep"></div>
-                        <a class="profile-dropdown-item danger" href="{% url 'logout' %}" role="menuitem">
+                        <button type="button" class="profile-dropdown-item danger" data-open-logout role="menuitem">
                             <i class="ph-bold ph-sign-out"></i>
                             <span>Logout</span>
-                        </a>
+                        </button>
                     </div>
 
                     <div class="profile-dropdown-footer">
@@ -79,6 +79,29 @@
         </div>
     </nav>
 
+    <div class="logout-confirm-overlay" id="logoutConfirm" aria-hidden="true">
+        <div class="logout-confirm-card" role="dialog" aria-modal="true" aria-label="Confirm Logout">
+            <div class="logout-confirm-icon">
+                <i class="ph-bold ph-sign-out"></i>
+            </div>
+            <h1 class="logout-confirm-title">Confirm Logout</h1>
+            <p class="logout-confirm-subtitle">
+                Are you sure you want to log out of your account? You will need to log back in to access your attendance dashboard.
+            </p>
+
+            <form method="post" action="{% url 'logout' %}" class="logout-confirm-actions">
+                {% csrf_token %}
+                <button type="submit" class="btn logout-btn-danger w-full">Logout</button>
+                <button type="button" class="btn logout-btn-cancel w-full" data-close-logout>Cancel</button>
+            </form>
+
+            <div class="logout-confirm-foot">
+                <i class="ph-bold ph-shield-check"></i>
+                <span>Secure session management</span>
+            </div>
+        </div>
+    </div>
+
     <main class="edit-profile-page">
         <div class="edit-profile-card">
             <header class="edit-profile-header">
@@ -88,7 +111,7 @@
                 </div>
             </header>
 
-            <form method="post" class="edit-profile-body">
+            <form method="post" class="edit-profile-body" enctype="multipart/form-data">
                 {% csrf_token %}
 
                 <section class="edit-profile-photo-row">
@@ -98,13 +121,22 @@
                         {% else %}
                             <img src="{% static 'default-avatar.png' %}" alt="Profile" class="default-avatar-img">
                         {% endif %}
-                        <button type="button" class="edit-profile-avatar-btn" aria-label="Change profile photo">
-                            <i class="ph-fill ph-camera"></i>
-                        </button>
                     </div>
                     <div class="edit-profile-photo-text">
                         <div class="edit-profile-photo-title">Profile Photo</div>
                         <div class="edit-profile-photo-sub">Update your photo and personal details here.</div>
+                    </div>
+                    <div class="edit-profile-photo-actions">
+                        <input id="profile_photo" name="profile_photo" type="file" accept="image/*" class="edit-photo-input">
+                        <label for="profile_photo" class="btn btn-outline btn-md edit-photo-btn">
+                            Upload profile photo
+                        </label>
+                        <button type="submit" name="photo_action" value="upload_profile_photo" class="btn btn-primary btn-md">
+                            Save upload
+                        </button>
+                        <button type="submit" name="photo_action" value="remove_profile_photo" class="btn btn-outline-red btn-md">
+                            Remove profile photo
+                        </button>
                     </div>
                 </section>
 
@@ -129,14 +161,11 @@
                         </div>
                         <div class="edit-field">
                             <label class="edit-label" for="dob">Date of Birth</label>
-                            <div class="edit-input-with-icon">
-                                <input id="dob" name="dob" class="edit-input" type="text" value="{{ date_of_birth }}">
-                                <i class="ph-bold ph-calendar-blank"></i>
-                            </div>
+                            <input id="dob" name="dob" class="edit-input" type="date" value="{{ dob_iso }}">
                         </div>
                         <div class="edit-field">
                             <label class="edit-label" for="gender">Gender</label>
-                            <select id="gender" name="gender" class="edit-input">
+                            <select id="gender" name="gender" class="edit-input js-custom-select">
                                 <option value="Male" {% if gender == "Male" %}selected{% endif %}>Male</option>
                                 <option value="Female" {% if gender == "Female" %}selected{% endif %}>Female</option>
                                 <option value="Other" {% if gender == "Other" %}selected{% endif %}>Other</option>
@@ -239,6 +268,131 @@
                     cards.forEach((c) => c.classList.remove('active'));
                     card.classList.add('active');
                 });
+            });
+        })();
+    </script>
+
+    <script>
+        (function () {
+            const overlay = document.getElementById('logoutConfirm');
+            if (!overlay) return;
+            const openBtn = document.querySelector('[data-open-logout]');
+            const closeBtn = overlay.querySelector('[data-close-logout]');
+            if (!openBtn || !closeBtn) return;
+
+            function open() {
+                overlay.classList.add('open');
+                overlay.setAttribute('aria-hidden', 'false');
+            }
+            function close() {
+                overlay.classList.remove('open');
+                overlay.setAttribute('aria-hidden', 'true');
+            }
+
+            openBtn.addEventListener('click', () => open());
+            closeBtn.addEventListener('click', () => close());
+            overlay.addEventListener('click', (e) => {
+                if (e.target === overlay) close();
+            });
+            window.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') close();
+            });
+        })();
+
+        (function () {
+            const selects = document.querySelectorAll('select.js-custom-select');
+            if (!selects.length) return;
+
+            function closeAll(except) {
+                document.querySelectorAll('.cselect.open').forEach((el) => {
+                    if (except && el === except) return;
+                    el.classList.remove('open');
+                    const btn = el.querySelector('.cselect-btn');
+                    if (btn) btn.setAttribute('aria-expanded', 'false');
+                });
+            }
+
+            selects.forEach((sel) => {
+                // Hide native select but keep it in the form.
+                sel.classList.add('cselect-native');
+
+                const wrap = document.createElement('div');
+                wrap.className = 'cselect';
+
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'cselect-btn';
+                btn.setAttribute('aria-haspopup', 'listbox');
+                btn.setAttribute('aria-expanded', 'false');
+
+                const label = document.createElement('span');
+                label.className = 'cselect-label';
+                btn.appendChild(label);
+
+                const caret = document.createElement('span');
+                caret.className = 'cselect-caret';
+                caret.innerHTML = '<i class="ph-bold ph-caret-down"></i>';
+                btn.appendChild(caret);
+
+                const list = document.createElement('div');
+                list.className = 'cselect-list';
+                list.setAttribute('role', 'listbox');
+
+                function setLabelFromSelect() {
+                    const opt = sel.options[sel.selectedIndex];
+                    label.textContent = opt ? opt.textContent : '';
+                }
+
+                function renderOptions() {
+                    list.innerHTML = '';
+                    [...sel.options].forEach((opt) => {
+                        const item = document.createElement('button');
+                        item.type = 'button';
+                        item.className = 'cselect-item' + (opt.selected ? ' active' : '');
+                        item.textContent = opt.textContent;
+                        item.setAttribute('role', 'option');
+                        item.setAttribute('aria-selected', opt.selected ? 'true' : 'false');
+                        item.addEventListener('click', () => {
+                            sel.value = opt.value;
+                            sel.dispatchEvent(new Event('change', { bubbles: true }));
+                            setLabelFromSelect();
+                            renderOptions();
+                            closeAll();
+                        });
+                        list.appendChild(item);
+                    });
+                }
+
+                btn.addEventListener('click', () => {
+                    const willOpen = !wrap.classList.contains('open');
+                    closeAll(wrap);
+                    wrap.classList.toggle('open', willOpen);
+                    btn.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
+                });
+
+                sel.addEventListener('change', () => {
+                    setLabelFromSelect();
+                    renderOptions();
+                });
+
+                // Build and insert
+                setLabelFromSelect();
+                renderOptions();
+
+                sel.parentNode.insertBefore(wrap, sel);
+                wrap.appendChild(btn);
+                wrap.appendChild(list);
+                wrap.appendChild(sel);
+            });
+
+            document.addEventListener('click', (e) => {
+                const open = document.querySelector('.cselect.open');
+                if (!open) return;
+                if (!open.contains(e.target)) closeAll();
+            });
+
+            window.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') closeAll();
             });
         })();
     </script>

@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+{% load static %}
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manual Login - AttendancePro</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'style.css' %}">
+    <script src="{% static 'theme.js' %}" defer></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+</head>
+
+<body class="manual-login-page">
+    <nav class="navbar navbar-border manual-login-navbar">
+        <div class="logo">
+            <i class="ph-fill ph-check-square-offset"></i>
+            <span>AttendancePro</span>
+        </div>
+        <div class="nav-links">
+            <a href="{% url 'welcome' %}">Home</a>
+            <a href="#">Support</a>
+            <a href="#">About</a>
+        </div>
+    </nav>
+
+    <main class="manual-login-shell">
+        <div class="manual-login-card manual-login-card-lg">
+            <div class="manual-login-card-head">
+                <div class="manual-login-card-title">Sign In</div>
+                <div class="manual-login-card-sub">Please enter your credentials to continue.</div>
+            </div>
+
+            {% if error %}
+                <div class="manual-login-error" role="alert">{{ error }}</div>
+            {% endif %}
+
+            <form method="post" class="manual-login-form" novalidate>
+                {% csrf_token %}
+                <div class="manual-field">
+                    <label class="manual-label" for="email">Email Address</label>
+                    <div class="manual-input-wrap">
+                        <i class="ph-bold ph-at" aria-hidden="true"></i>
+                        <input id="email" name="email" type="email" class="manual-input" placeholder="name@company.com" value="{{ email|default:'' }}" required>
+                    </div>
+                </div>
+
+                <div class="manual-field">
+                    <div class="manual-label-row">
+                        <label class="manual-label" for="password">Password</label>
+                        <a class="manual-link" href="#" onclick="return false;">Forgot Password?</a>
+                    </div>
+                    <div class="manual-input-wrap">
+                        <i class="ph-bold ph-lock" aria-hidden="true"></i>
+                        <input id="password" name="password" type="password" class="manual-input" placeholder="••••••••" required>
+                    </div>
+                </div>
+
+                <button type="submit" class="manual-primary-btn">Sign In</button>
+
+                <div class="manual-divider">
+                    <span>ALTERNATIVE ACCESS</span>
+                </div>
+
+                <a class="manual-secondary-btn" href="{% url 'signin' %}">
+                    <i class="ph-bold ph-scan-smiley"></i>
+                    <span>Sign in with Face Recognition</span>
+                </a>
+            </form>
+        </div>
+
+        <div class="manual-login-footer">
+            <div>© 2023 AttendancePro Systems. All rights reserved.</div>
+            <div class="manual-login-footer-links">
+                <a href="#" onclick="return false;">Privacy Policy</a>
+                <span>•</span>
+                <a href="#" onclick="return false;">Terms of Service</a>
+            </div>
+        </div>
+    </main>
+</body>
+
+</html>
+

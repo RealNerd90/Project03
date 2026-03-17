@@ -6,6 +6,7 @@ class RegisteredUser(models.Model):
 
     name = models.CharField(max_length=255, unique=True)
     email = models.EmailField(blank=True, default="")
+    password = models.CharField(max_length=128, blank=True, default="")
     phone = models.CharField(max_length=50, blank=True, default="")
     dob_display = models.CharField(max_length=64, blank=True, default="")
     gender = models.CharField(max_length=16, blank=True, default="")

@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+{% load static %}
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Confirm Logout - AttendancePro</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'style.css' %}">
+    <script src="{% static 'theme.js' %}" defer></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+</head>
+
+<body class="bg-gray-lighter">
+    <main class="logout-confirm-page">
+        <div class="logout-confirm-card">
+            <div class="logout-confirm-icon">
+                <i class="ph-bold ph-sign-out"></i>
+            </div>
+
+            <h1 class="logout-confirm-title">Confirm Logout</h1>
+            <p class="logout-confirm-subtitle">
+                Are you sure you want to log out of your account? You will need to log back in to access your attendance dashboard.
+            </p>
+
+            <form method="post" action="{% url 'logout' %}" class="logout-confirm-actions">
+                {% csrf_token %}
+                <button type="submit" class="btn logout-btn-danger w-full">Logout</button>
+                <a href="{% url 'dashboard' %}" class="btn logout-btn-cancel w-full">Cancel</a>
+            </form>
+
+            <div class="logout-confirm-foot">
+                <i class="ph-bold ph-shield-check"></i>
+                <span>Secure session management</span>
+            </div>
+        </div>
+    </main>
+</body>
+
+</html>
+

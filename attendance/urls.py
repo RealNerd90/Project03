@@ -11,6 +11,7 @@ urlpatterns = [
     path("settings/", views.settings_view, name="settings"),
     path("scanner/", views.scanner, name="scanner"),
     path("signin/", views.signin, name="signin"),
+    path("login/", views.manual_login, name="manual-login"),
     path("signin/scan/", views.signin_scan, name="signin-scan"),
     path("signin/success/", views.signin_success, name="signin-success"),
     path("logout/", views.logout_view, name="logout"),

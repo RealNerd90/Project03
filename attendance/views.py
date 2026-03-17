@@ -243,12 +243,15 @@ def analytics(request: HttpRequest) -> HttpResponse:
 
 
 def logout_view(request: HttpRequest) -> HttpResponse:
-    """End the current session and return to welcome."""
+    """POST-only logout; UI confirmation is handled client-side via a modal."""
+    if request.method != "POST":
+        return redirect("dashboard")
+
     try:
         request.session.flush()
     except Exception:
         request.session.clear()
-    return redirect("welcome")
+    return redirect("signin")
 
 
 def profile_view(request: HttpRequest) -> HttpResponse:
@@ -286,8 +289,21 @@ def profile_view(request: HttpRequest) -> HttpResponse:
     }
     role_label, role_desc = role_map.get(role_key, role_map["employee"])
 
-    # Date of birth is stored as a display string in the session.
-    dob_display = dob_display or request.session.get("profile_dob_display") or "October 24, 1992"
+    def _pretty_dob(val: str) -> str:
+        raw = (val or "").strip()
+        if not raw:
+            return ""
+        # Accept yyyy-mm-dd, mm/dd/yyyy, or "Month DD, YYYY"
+        for fmt in ("%Y-%m-%d", "%m/%d/%Y", "%B %d, %Y"):
+            try:
+                d = datetime.strptime(raw, fmt).date()
+                return d.strftime("%B %d, %Y").replace(" 0", " ")
+            except Exception:
+                continue
+        return raw
+
+    # Date of birth stored in DB (fallback to session, then default).
+    dob_display = _pretty_dob(dob_display) or _pretty_dob(request.session.get("profile_dob_display", "")) or "October 24, 1992"
     gender = gender or "Male"
     phone = phone or "+1 (555) 000-1234"
 
@@ -329,10 +345,53 @@ def profile_edit_view(request: HttpRequest) -> HttpResponse:
         dob_display = user.dob_display or ""
         gender = user.gender or ""
 
+    def _dob_to_iso(val: str) -> str:
+        raw = (val or "").strip()
+        if not raw:
+            return ""
+        for fmt in ("%Y-%m-%d", "%m/%d/%Y", "%B %d, %Y"):
+            try:
+                d = datetime.strptime(raw, fmt).date()
+                return d.isoformat()
+            except Exception:
+                continue
+        return ""
+
     if request.method == "POST":
+        photo_action = (request.POST.get("photo_action") or "").strip()
+        if photo_action in {"upload_profile_photo", "remove_profile_photo"} and display_name != "Visitor":
+            profile_photo_folder = os.path.join(
+                os.path.dirname(os.path.dirname(__file__)),
+                "frontend",
+                "profile_photos",
+            )
+            os.makedirs(profile_photo_folder, exist_ok=True)
+            photo_filename = f"{slugify(display_name)}.jpg"
+            profile_photo_path = os.path.join(profile_photo_folder, photo_filename)
+
+            if photo_action == "upload_profile_photo":
+                upload = request.FILES.get("profile_photo")
+                if upload:
+                    try:
+                        with open(profile_photo_path, "wb") as f:
+                            for chunk in upload.chunks():
+                                f.write(chunk)
+                    except Exception:
+                        pass
+                return redirect("profile-edit")
+
+            if photo_action == "remove_profile_photo":
+                try:
+                    if os.path.exists(profile_photo_path):
+                        os.remove(profile_photo_path)
+                except Exception:
+                    pass
+                return redirect("profile-edit")
+
         full_name = (request.POST.get("full_name") or display_name).strip()
         email_val = (request.POST.get("email") or "").strip()
         dob_val = (request.POST.get("dob") or "").strip()
+        dob_iso = _dob_to_iso(dob_val) or dob_val
         gender_val = (request.POST.get("gender") or "").strip()
         role_key = (request.POST.get("role") or "employee").strip().lower()
         if role_key not in {"student", "employee", "teacher"}:
@@ -341,8 +400,8 @@ def profile_edit_view(request: HttpRequest) -> HttpResponse:
         # Persist name/email into the registry if possible.
         if user and full_name and full_name != "Visitor":
             # Name/email are fixed; we do not mutate them here.
-            if dob_val:
-                user.dob_display = dob_val
+            if dob_iso:
+                user.dob_display = dob_iso
             if gender_val:
                 user.gender = gender_val
             if phone:
@@ -356,20 +415,21 @@ def profile_edit_view(request: HttpRequest) -> HttpResponse:
 
         # Store account role preference and DOB in the session.
         request.session["account_role"] = role_key
-        if dob_val:
-            request.session["profile_dob_display"] = dob_val
+        if dob_iso:
+            request.session["profile_dob_display"] = dob_iso
 
         return redirect("profile")
 
     current_role = (user.account_role if user and user.account_role else None) or request.session.get("account_role", "employee")
-    dob_display = dob_display or request.session.get("profile_dob_display") or "05/15/1992"
+    dob_iso = _dob_to_iso(dob_display) or _dob_to_iso(request.session.get("profile_dob_display", "")) or "1992-05-15"
     context = {
         "display_name": display_name,
         "profile_photo_url": profile_photo_url,
         "full_name": display_name,
         "email": email or "alex.henderson@company.com",
         "phone": phone or "+1 (555) 000-1234",
-        "date_of_birth": dob_display,
+        "date_of_birth": dob_display or "05/15/1992",
+        "dob_iso": dob_iso,
         "gender": gender or "Male",
         "current_role": current_role,
     }
@@ -465,6 +525,43 @@ def scanner(request: HttpRequest) -> HttpResponse:
 def signin(request: HttpRequest) -> HttpResponse:
     """Render the sign-in (scanner) page."""
     return render(request, "signin.html")
+
+
+def manual_login(request: HttpRequest) -> HttpResponse:
+    """Manual email/password login (simple registry-based)."""
+    if request.method == "POST":
+        email = (request.POST.get("email") or "").strip()
+        password = (request.POST.get("password") or "").strip()
+        if not email or not password:
+            return render(
+                request,
+                "manual_login.html",
+                {"error": "Please enter both email and password.", "email": email},
+                status=400,
+            )
+
+        user = RegisteredUser.objects.filter(email__iexact=email).first()
+        if not user:
+            return render(
+                request,
+                "manual_login.html",
+                {"error": "No account found for that email.", "email": email},
+                status=400,
+            )
+
+        # Verify password (stored in attendance_registereduser.password).
+        if not user.password or user.password != password:
+            return render(
+                request,
+                "manual_login.html",
+                {"error": "Invalid email or password.", "email": email},
+                status=400,
+            )
+
+        request.session["display_name"] = _normalize_display_name(user.name)
+        return redirect("dashboard")
+
+    return render(request, "manual_login.html")
 
 
 def registration(request: HttpRequest) -> HttpResponse:
@@ -808,11 +905,17 @@ def register_face(request: HttpRequest) -> HttpResponse:
             return JsonResponse({"success": False, "error": f"Invalid JSON: {exc}"}, status=400)
 
         full_name = (payload.get("fullName") or "").strip()
+        email = (payload.get("email") or "").strip()
+        direction = (payload.get("direction") or "front").strip().lower()
         image_data = payload.get("image")
         if not full_name:
             return JsonResponse({"success": False, "error": "Please provide a full name."}, status=400)
         if not image_data:
             return JsonResponse({"success": False, "error": "Missing image data."}, status=400)
+
+        allowed_dirs = {"front", "left", "right", "up", "down"}
+        if direction not in allowed_dirs:
+            direction = "front"
 
         if "," in image_data:
             image_data = image_data.split(",", 1)[1]
@@ -822,27 +925,50 @@ def register_face(request: HttpRequest) -> HttpResponse:
         except Exception as exc:
             return JsonResponse({"success": False, "error": f"Invalid image data: {exc}"}, status=400)
 
-        tmp_dir = os.path.join("output", "registration_uploads")
-        os.makedirs(tmp_dir, exist_ok=True)
-        tmp_path = os.path.join(tmp_dir, f"register_{uuid.uuid4().hex}.jpg")
-
         try:
             from PIL import Image
             img = Image.open(BytesIO(image_bytes)).convert("RGB")
-            img.save(tmp_path)
         except Exception as exc:
-            if os.path.exists(tmp_path):
-                os.remove(tmp_path)
             return JsonResponse({"success": False, "error": f"Could not process image: {exc}"}, status=400)
 
         system = get_system()
-        success = system.register_student(full_name, tmp_path)
-        if os.path.exists(tmp_path):
-            os.remove(tmp_path)
+        # Save as multi-angle references: sample_faces/<Name>/<direction>.jpg
+        student_dir = os.path.join(system.database_path, full_name)
+        os.makedirs(student_dir, exist_ok=True)
+        save_path = os.path.join(student_dir, f"{direction}.jpg")
 
-        if success:
-            return JsonResponse({"success": True, "message": f"Successfully registered {full_name}."}, status=200)
-        return JsonResponse({"success": False, "error": "Registration failed. Please try again in good lighting."}, status=200)
+        try:
+            img.save(save_path)
+        except Exception as exc:
+            return JsonResponse({"success": False, "error": f"Could not save image: {exc}"}, status=500)
+
+        # Create/update user record (email optional)
+        try:
+            if email:
+                RegisteredUser.objects.update_or_create(
+                    name=full_name,
+                    defaults={"email": email},
+                )
+            else:
+                RegisteredUser.objects.get_or_create(name=full_name)
+        except Exception:
+            # Don't fail registration if DB write fails; face refs still saved.
+            pass
+
+        # Reload after DOWN capture (end of the guided flow)
+        if direction == "down":
+            try:
+                system.load_database()
+            except Exception:
+                pass
+
+        return JsonResponse(
+            {
+                "success": True,
+                "message": f"Captured {direction}.",
+            },
+            status=200,
+        )
 
     # Fallback for legacy form POST in case JavaScript is disabled.
     full_name = (request.POST.get("fullName") or "").strip()
