@@ -35,8 +35,7 @@
         <div class="enrollment-card">
             <div class="enrollment-header">
                 <h1 class="enrollment-title">Face Recognition Enrollment</h1>
-                <p class="enrollment-subtitle">Please position your face within the frame and look directly at the
-                    camera.</p>
+                <p class="enrollment-subtitle">Please position your face within the frame.</p>
             </div>
 
             <div class="camera-preview-container">
@@ -118,10 +117,6 @@
             </div>
         </div>
     </main>
-
-    <footer class="signin-footer">
-        <p class="copyright">© 2024 AttendanceManager Biometric Enrollment System.</p>
-    </footer>
 
     <script>
         const video = document.getElementById('registerVideo');
@@ -254,6 +249,7 @@
         startRegisterCamera();
         renderStep();
     </script>
+    {% include "_footer.html" %}
 </body>
 
 </html>

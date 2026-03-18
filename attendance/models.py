@@ -1,4 +1,5 @@
 from django.db import models
+from django.contrib.auth.hashers import check_password, make_password
 
 
 class RegisteredUser(models.Model):
@@ -47,4 +48,24 @@ class AttendanceRecord(models.Model):
 
     def __str__(self) -> str:
         return f"{self.name} - {self.date} {self.time or ''} ({self.status})"
+
+
+class AdminAccount(models.Model):
+    email = models.EmailField(unique=True)
+    password_hash = models.CharField(max_length=256)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["email"]
+
+    def __str__(self) -> str:
+        return f"Admin <{self.email}>"
+
+    def set_password(self, raw_password: str) -> None:
+        self.password_hash = make_password(raw_password)
+
+    def check_password(self, raw_password: str) -> bool:
+        if not self.password_hash:
+            return False
+        return check_password(raw_password, self.password_hash)
 

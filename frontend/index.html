@@ -19,7 +19,7 @@
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
 </head>
 
-<body>
+<body class="home-fixed">
     <nav class="navbar">
         <div class="logo">
             <i class="ph-fill ph-check-square-offset"></i>
@@ -83,50 +83,7 @@
         </div>
     </main>
 
-    <section class="features-section">
-        <h2 class="section-title">Why choose AttendancePro?</h2>
-        <p class="section-subtitle">Designed for efficiency and ease of use across all departments.</p>
-
-        <div class="features-grid">
-            <div class="feature-card">
-                <div class="feature-icon-wrapper blue-light">
-                    <i class="ph-fill ph-clock"></i>
-                </div>
-                <h3>Real-time Tracking</h3>
-                <p>Monitor attendance as it happens with instant updates and notifications for your entire team.</p>
-            </div>
-
-            <div class="feature-card">
-                <div class="feature-icon-wrapper blue-light">
-                    <i class="ph-bold ph-chart-bar"></i>
-                </div>
-                <h3>Automated Reports</h3>
-                <p>Generate detailed compliance and performance reports in one click with visual insights.</p>
-            </div>
-
-            <div class="feature-card">
-                <div class="feature-icon-wrapper blue-light">
-                    <i class="ph-fill ph-shield-check"></i>
-                </div>
-                <h3>Secure Access</h3>
-                <p>Enterprise-grade security and encryption to protect your sensitive organizational data.</p>
-            </div>
-        </div>
-    </section>
-
-    <footer class="footer">
-        <div class="footer-links">
-            <a href="#">Privacy Policy</a>
-            <a href="#">Terms of Service</a>
-            <a href="#">Help Center</a>
-        </div>
-        <div class="footer-socials">
-            <a href="#"><i class="ph ph-globe"></i></a>
-            <a href="#"><i class="ph ph-at"></i></a>
-            <a href="#"><i class="ph ph-users"></i></a>
-        </div>
-        <p class="copyright">© 2024 AttendancePro Systems Inc. All rights reserved.</p>
-    </footer>
+    {% include "_footer.html" %}
 </body>
 
 </html>

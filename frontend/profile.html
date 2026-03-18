@@ -14,7 +14,7 @@
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
 </head>
 
-<body class="bg-gray-lighter">
+<body class="bg-gray-lighter profile-fixed">
     <nav class="navbar dashboard-navbar navbar-border flex-between">
         <div class="logo">
             <i class="ph-fill ph-check-square-offset text-primary"></i>
@@ -159,15 +159,7 @@
         </div>
     </main>
 
-    <footer class="profile-footer">
-        <div class="profile-footer-inner">
-            <span>© 2024 Attendance Portal</span>
-            <span class="profile-footer-sep">•</span>
-            <a href="#">Privacy Policy</a>
-            <span class="profile-footer-sep">•</span>
-            <a href="#">Terms of Service</a>
-        </div>
-    </footer>
+    {% include "_footer.html" %}
 
     <script>
         (function () {

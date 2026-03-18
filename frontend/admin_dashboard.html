@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+{% load static %}
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Dashboard - Attendance Portal</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="{% static 'style.css' %}" />
+  <script src="{% static 'theme.js' %}" defer></script>
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+</head>
+
+<body class="admin-dashboard">
+  <div class="admin-shell">
+    <aside class="admin-sidebar" aria-label="Admin navigation">
+      <div class="admin-brand">
+        <div class="admin-brand-mark" aria-hidden="true">
+          <i class="ph-fill ph-shield-check"></i>
+        </div>
+        <div class="admin-brand-meta">
+          <div class="admin-brand-title">Attendance Portal</div>
+          <div class="admin-brand-subtitle">Admin Dashboard</div>
+        </div>
+      </div>
+
+      <nav class="admin-nav">
+        <a class="admin-nav-item is-active" href="#" aria-current="page">
+          <span class="admin-nav-icon" aria-hidden="true"><i class="ph-bold ph-squares-four"></i></span>
+          <span class="admin-nav-label">Dashboard</span>
+        </a>
+        <a class="admin-nav-item" href="#">
+          <span class="admin-nav-icon" aria-hidden="true"><i class="ph-bold ph-crosshair"></i></span>
+          <span class="admin-nav-label">Geofencing</span>
+        </a>
+        <a class="admin-nav-item" href="#">
+          <span class="admin-nav-icon" aria-hidden="true"><i class="ph-bold ph-users-three"></i></span>
+          <span class="admin-nav-label">Student Management</span>
+        </a>
+        <a class="admin-nav-item" href="#">
+          <span class="admin-nav-icon" aria-hidden="true"><i class="ph-bold ph-gear-six"></i></span>
+          <span class="admin-nav-label">System Settings</span>
+        </a>
+      </nav>
+
+      <div class="admin-sidebar-foot">
+        <div class="admin-user">
+          <div class="admin-user-avatar" aria-hidden="true">
+            <i class="ph-bold ph-user"></i>
+          </div>
+          <div class="admin-user-meta">
+            <div class="admin-user-name">Alex Morgan</div>
+            <div class="admin-user-role">System Admin</div>
+          </div>
+          <button type="button" class="admin-user-action" aria-label="Account actions">
+            <i class="ph-bold ph-sign-out"></i>
+          </button>
+        </div>
+      </div>
+    </aside>
+
+    <div class="admin-main">
+      <main class="admin-content">
+        <section class="admin-page-head">
+          <div class="admin-page-head-row">
+            <div class="admin-page-head-text">
+              <h1>Dashboard Overview</h1>
+              <p>Real-time attendance metrics and active system status.</p>
+            </div>
+
+            <div class="admin-campus-pill" role="status" aria-label="System status">
+              <div class="admin-campus-name">Campus West</div>
+              <div class="admin-campus-status">
+                <span class="admin-dot" aria-hidden="true"></span>
+                <span>System Online</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="admin-kpis" aria-label="Key metrics">
+          <article class="admin-card admin-kpi">
+            <div class="admin-kpi-top">
+              <div class="admin-kpi-icon admin-kpi-icon--blue" aria-hidden="true"><i class="ph-bold ph-users"></i></div>
+              <div class="admin-kpi-delta admin-kpi-delta--up">
+                <i class="ph-bold ph-arrow-up-right" aria-hidden="true"></i>
+                <span>+12%</span>
+              </div>
+            </div>
+            <div class="admin-kpi-label">Total Registered Students</div>
+            <div class="admin-kpi-value">1,284</div>
+          </article>
+
+          <article class="admin-card admin-kpi">
+            <div class="admin-kpi-top">
+              <div class="admin-kpi-icon admin-kpi-icon--green" aria-hidden="true"><i class="ph-bold ph-check-circle"></i></div>
+              <div class="admin-kpi-delta admin-kpi-delta--up">
+                <i class="ph-bold ph-arrow-up-right" aria-hidden="true"></i>
+                <span>+3%</span>
+              </div>
+            </div>
+            <div class="admin-kpi-label">Today's Attendance %</div>
+            <div class="admin-kpi-value">92.5%</div>
+          </article>
+
+          <article class="admin-card admin-kpi">
+            <div class="admin-kpi-top">
+              <div class="admin-kpi-icon admin-kpi-icon--purple" aria-hidden="true"><i class="ph-bold ph-radar"></i></div>
+              <div class="admin-kpi-delta admin-kpi-delta--down">
+                <i class="ph-bold ph-arrow-down-right" aria-hidden="true"></i>
+                <span>-1%</span>
+              </div>
+            </div>
+            <div class="admin-kpi-label">Active Geofences</div>
+            <div class="admin-kpi-value">14</div>
+          </article>
+        </section>
+
+        <section class="admin-two-col" aria-label="Charts and map">
+          <article class="admin-card admin-panel">
+            <div class="admin-panel-head">
+              <div>
+                <div class="admin-panel-eyebrow">WEEKLY ATTENDANCE TRENDS</div>
+                <div class="admin-panel-metric">
+                  <span class="admin-panel-big">88%</span>
+                  <span class="admin-panel-sub">Average</span>
+                </div>
+              </div>
+              <div class="admin-pill admin-pill--success">+2.4% last 7 days</div>
+            </div>
+
+            <div class="admin-chart">
+              <svg viewBox="0 0 640 220" role="img" aria-label="Weekly attendance trend chart">
+                <defs>
+                  <linearGradient id="trendFill" x1="0" x2="0" y1="0" y2="1">
+                    <stop offset="0%" stop-color="#0A7DFF" stop-opacity="0.18" />
+                    <stop offset="100%" stop-color="#0A7DFF" stop-opacity="0" />
+                  </linearGradient>
+                </defs>
+                <path class="admin-chart-grid" d="M 24 40 H 616 M 24 90 H 616 M 24 140 H 616 M 24 190 H 616" />
+                <path class="admin-chart-area" d="M24,160 C90,148 122,120 168,132 C216,146 252,96 300,104 C352,114 396,82 438,96 C484,112 528,78 616,70 L616,200 L24,200 Z" />
+                <path class="admin-chart-line" d="M24,160 C90,148 122,120 168,132 C216,146 252,96 300,104 C352,114 396,82 438,96 C484,112 528,78 616,70" />
+              </svg>
+              <div class="admin-chart-x">
+                <span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span>
+              </div>
+            </div>
+          </article>
+
+          <article class="admin-card admin-panel">
+            <div class="admin-panel-head admin-panel-head--row">
+              <div class="admin-panel-title">Live Map Activity</div>
+              <a class="admin-panel-link" href="#">View Map View</a>
+            </div>
+
+            <div class="admin-map">
+              <div class="admin-map-surface" aria-hidden="true">
+                <div class="admin-map-grid"></div>
+                <div class="admin-map-pin"></div>
+                <div class="admin-map-ripple"></div>
+                <div class="admin-map-label">
+                  <div class="admin-map-label-title">
+                    <span class="admin-map-label-dot" aria-hidden="true"></span>
+                    <span>Campus Main Entrance</span>
+                  </div>
+                  <div class="admin-map-label-sub">42 students currently active</div>
+                </div>
+              </div>
+            </div>
+          </article>
+        </section>
+
+        <section class="admin-card admin-table-card" aria-label="Recent attendance logs">
+          <div class="admin-table-head">
+            <div>
+              <div class="admin-table-title">Recent Attendance Logs</div>
+            </div>
+            <div class="admin-table-actions">
+              <button type="button" class="admin-btn admin-btn--ghost">Export CSV</button>
+              <button type="button" class="admin-btn admin-btn--primary">Refresh</button>
+            </div>
+          </div>
+
+          <div class="admin-table">
+            <div class="admin-table-row admin-table-row--head">
+              <div>STUDENT</div>
+              <div>TIME</div>
+              <div>GEOFENCE</div>
+              <div>STATUS</div>
+            </div>
+
+            <div class="admin-table-row">
+              <div class="admin-student">
+                <div class="admin-avatar" aria-hidden="true"></div>
+                <div class="admin-student-name">Jordan Smith</div>
+              </div>
+              <div class="admin-muted">08:45 AM</div>
+              <div class="admin-muted">Science Wing</div>
+              <div><span class="admin-badge admin-badge--ok">VERIFIED</span></div>
+            </div>
+
+            <div class="admin-table-row">
+              <div class="admin-student">
+                <div class="admin-avatar admin-avatar--tint" aria-hidden="true"><i class="ph-bold ph-user"></i></div>
+                <div class="admin-student-name">Elena Rodriguez</div>
+              </div>
+              <div class="admin-muted">08:42 AM</div>
+              <div class="admin-muted">Main Library</div>
+              <div><span class="admin-badge admin-badge--ok">VERIFIED</span></div>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+  </div>
+</body>
+
+</html>

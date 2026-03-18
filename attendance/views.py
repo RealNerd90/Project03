@@ -17,7 +17,7 @@ from django.utils.text import slugify
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 
-from .models import AttendanceRecord, RegisteredUser
+from .models import AttendanceRecord, RegisteredUser, AdminAccount
 from .face_system import get_system
 from attendance_system import check_location_allowed
 
@@ -216,6 +216,13 @@ def dashboard(request: HttpRequest) -> HttpResponse:
             "calendar_month_label": calendar_month_label,
         },
     )
+
+
+def admin_dashboard(request: HttpRequest) -> HttpResponse:
+    """Admin dashboard UI (static template in frontend/)."""
+    if not request.session.get("is_admin"):
+        return redirect("manual-login")
+    return render(request, "admin_dashboard.html")
 
 
 def analytics(request: HttpRequest) -> HttpResponse:
@@ -540,6 +547,12 @@ def manual_login(request: HttpRequest) -> HttpResponse:
                 status=400,
             )
 
+        admin = AdminAccount.objects.filter(email__iexact=email).first()
+        if admin and admin.check_password(password):
+            request.session["is_admin"] = True
+            request.session["display_name"] = "Admin"
+            return redirect("admin-dashboard")
+
         user = RegisteredUser.objects.filter(email__iexact=email).first()
         if not user:
             return render(
@@ -559,6 +572,7 @@ def manual_login(request: HttpRequest) -> HttpResponse:
             )
 
         request.session["display_name"] = _normalize_display_name(user.name)
+        request.session.pop("is_admin", None)
         return redirect("dashboard")
 
     return render(request, "manual_login.html")
