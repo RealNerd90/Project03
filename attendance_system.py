@@ -696,9 +696,8 @@ class AttendanceSystem:
     async def mark_attendance(self, image_path):
         """Mark attendance using largest face detected."""
         # Capture the exact timestamp immediately when attendance is being marked
-        # Define IST timezone manually to avoid ZoneInfo issues on Windows
-        IST = timezone(timedelta(hours=5, minutes=30))
-        attendance_timestamp = datetime.now(IST)
+        # Use local system timezone for timestamp
+        attendance_timestamp = datetime.now().astimezone()
         
         print(f"\nProcessing attendance for: {image_path}")
         
@@ -893,8 +892,7 @@ class AttendanceSystem:
             attendance_marked = False
             timestamp = None
             if mark_attendance:
-                IST = timezone(timedelta(hours=5, minutes=30))
-                timestamp = datetime.now(IST)
+                timestamp = datetime.now().astimezone()
                 await self.log_attendance(best_match_name, timestamp)
                 attendance_marked = True
 
@@ -1040,8 +1038,7 @@ class AttendanceSystem:
                                 # SUCCESS!
                                 final_match_name = current_match_name
                                 if mark_attendance:
-                                    IST = timezone(timedelta(hours=5, minutes=30))
-                                    attendance_timestamp = datetime.now(IST)
+                                    attendance_timestamp = datetime.now().astimezone()
                                     await self.log_attendance(current_match_name, attendance_timestamp)
                                     system_message = f"Done! Attendance Marked: {current_match_name}"
                                 else:

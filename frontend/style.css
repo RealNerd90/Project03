@@ -3090,6 +3090,11 @@ html[data-theme="dark"] .cselect-item.active {
     color: var(--text-dark);
 }
 
+#clock-hours,
+#clock-minutes {
+    color: #000 !important;
+}
+
 .gray-light-bg {
     background-color: #F3F4F6;
     color: var(--text-dark);
