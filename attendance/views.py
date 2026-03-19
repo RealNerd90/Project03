@@ -271,7 +271,7 @@ def profile_view(request: HttpRequest) -> HttpResponse:
     phone = ""
     dob_display = ""
     gender = ""
-    role_key = request.session.get("account_role", "employee")
+    role_key = request.session.get("account_role", "")
     if display_name != "Visitor":
         user, _ = RegisteredUser.objects.get_or_create(name=display_name)
         email = user.email or ""
@@ -287,14 +287,13 @@ def profile_view(request: HttpRequest) -> HttpResponse:
     except Exception:
         emp_id = "EMP-1234"
 
-    # Account role is stored in the session (simple front-end preference).
-    role_key = role_key or "employee"
+    # Account role is stored in the DB/session. If missing, keep blank (user fills it in).
     role_map = {
         "student": ("Student", "Access to courses"),
         "employee": ("Employee", "Standard portal access"),
         "teacher": ("Teacher", "Management tools"),
     }
-    role_label, role_desc = role_map.get(role_key, role_map["employee"])
+    role_label, role_desc = role_map.get(role_key, ("—", ""))
 
     def _pretty_dob(val: str) -> str:
         raw = (val or "").strip()
@@ -309,10 +308,10 @@ def profile_view(request: HttpRequest) -> HttpResponse:
                 continue
         return raw
 
-    # Date of birth stored in DB (fallback to session, then default).
-    dob_display = _pretty_dob(dob_display) or _pretty_dob(request.session.get("profile_dob_display", "")) or "October 24, 1992"
-    gender = gender or "Male"
-    phone = phone or "+1 (555) 000-1234"
+    # Keep fields blank until user fills them in.
+    dob_display = _pretty_dob(dob_display) or _pretty_dob(request.session.get("profile_dob_display", ""))
+    gender = gender or ""
+    phone = phone or ""
 
     # The design is mostly static; we provide sensible defaults.
     return render(
@@ -609,7 +608,7 @@ def signin_success(request: HttpRequest) -> HttpResponse:
     request.session["display_name"] = name
 
     # Account role from database (fallback: employee).
-    role_key = "employee"
+    role_key = ""
     if name != "Visitor":
         user, _ = RegisteredUser.objects.get_or_create(name=name)
         if user.account_role:
@@ -619,7 +618,7 @@ def signin_success(request: HttpRequest) -> HttpResponse:
         "employee": ("Employee", "Standard portal access"),
         "teacher": ("Teacher", "Management tools"),
     }
-    account_role_label, account_role_desc = role_map.get(role_key, role_map["employee"])
+    account_role_label, account_role_desc = role_map.get(role_key, ("—", ""))
 
     context = {
         "name": name,
@@ -920,6 +919,7 @@ def register_face(request: HttpRequest) -> HttpResponse:
 
         full_name = (payload.get("fullName") or "").strip()
         email = (payload.get("email") or "").strip()
+        password = (payload.get("password") or "").strip()
         direction = (payload.get("direction") or "front").strip().lower()
         image_data = payload.get("image")
         if not full_name:
@@ -956,15 +956,19 @@ def register_face(request: HttpRequest) -> HttpResponse:
         except Exception as exc:
             return JsonResponse({"success": False, "error": f"Could not save image: {exc}"}, status=500)
 
-        # Create/update user record (email optional)
+        # Create/update user record.
+        # New users should start with blank DOB/gender/account role; user fills later.
         try:
+            user, created = RegisteredUser.objects.get_or_create(name=full_name)
+            if created:
+                user.dob_display = ""
+                user.gender = ""
+                user.account_role = ""
             if email:
-                RegisteredUser.objects.update_or_create(
-                    name=full_name,
-                    defaults={"email": email},
-                )
-            else:
-                RegisteredUser.objects.get_or_create(name=full_name)
+                user.email = email
+            if password:
+                user.password = password
+            user.save()
         except Exception:
             # Don't fail registration if DB write fails; face refs still saved.
             pass
@@ -987,6 +991,7 @@ def register_face(request: HttpRequest) -> HttpResponse:
     # Fallback for legacy form POST in case JavaScript is disabled.
     full_name = (request.POST.get("fullName") or "").strip()
     email = (request.POST.get("email") or "").strip()
+    password = (request.POST.get("password") or "").strip()
     if not full_name:
         return render(
             request,
@@ -1004,11 +1009,19 @@ def register_face(request: HttpRequest) -> HttpResponse:
     if not success:
         context["error"] = "Registration failed. Please try again in good lighting."
     else:
-        if email:
-            RegisteredUser.objects.update_or_create(
-                name=full_name,
-                defaults={"email": email},
-            )
+        try:
+            user, created = RegisteredUser.objects.get_or_create(name=full_name)
+            if created:
+                user.dob_display = ""
+                user.gender = ""
+                user.account_role = ""
+            if email:
+                user.email = email
+            if password:
+                user.password = password
+            user.save()
+        except Exception:
+            pass
     return render(request, "registration.html", context)
 
 

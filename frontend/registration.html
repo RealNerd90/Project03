@@ -15,6 +15,10 @@
     <script src="{% static 'theme.js' %}" defer></script>
     <!-- Phosphor Icons -->
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <!-- MediaPipe Face Mesh (for precise capture gating + overlay) -->
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
 </head>
 
 <body class="bg-gray-light no-scroll">
@@ -44,11 +48,7 @@
                 </div>
                 <div class="face-guide">
                     <video id="registerVideo" autoplay playsinline muted></video>
-                    <div class="face-overlay" aria-hidden="true">
-                        <div class="face-icon-container">
-                            <i class="ph-fill ph-user-circle"></i>
-                        </div>
-                    </div>
+                    <canvas id="registerMeshCanvas" class="face-mesh-overlay" aria-hidden="true"></canvas>
                 </div>
             </div>
             <div class="enroll-guide" aria-hidden="true">
@@ -70,6 +70,19 @@
                         </div>
                     </div>
                     <div class="form-group">
+                        <label for="password">Password</label>
+                        <div class="input-with-icon input-with-toggle">
+                            <i class="ph-fill ph-lock input-icon"></i>
+                            <input type="password" id="password" name="password" placeholder="Create a password" required>
+                            <button type="button" id="passwordToggle" class="password-toggle-btn" aria-label="Show password">
+                                <i class="ph-bold ph-eye"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group form-group-span-2">
                         <label for="email">Email</label>
                         <div class="input-with-icon">
                             <i class="ph-fill ph-envelope input-icon"></i>
@@ -96,10 +109,6 @@
                 <span class="enroll-dot"></span>
             </div>
 
-            <div class="security-info">
-                <i class="ph-fill ph-shield-check"></i> Encrypted biometric data processing
-            </div>
-
             {% if registration_success %}
                 <p class="text-sm text-green" style="margin-top: 0.75rem;">
                     Successfully registered {{ registered_name }}. You can now use face recognition to check in.
@@ -123,11 +132,20 @@
         const message = document.getElementById('registerMessage');
         const form = document.getElementById('registrationForm');
         const cancelBtn = document.getElementById('cancelRegister');
+        const meshCanvas = document.getElementById('registerMeshCanvas');
+        const meshCtx = meshCanvas ? meshCanvas.getContext('2d') : null;
         let currentStream = null;
         const guideTextEl = document.getElementById('enrollGuideText');
         const stepPillEl = document.getElementById('enrollStepPill');
         const progressEl = document.getElementById('enrollProgress');
         const captureBtn = form.querySelector('button[type=\"submit\"]');
+
+        let gateOk = false;
+        let gateReason = "Align your face properly";
+        let stableCount = 0;
+        let lastCenter = null;
+        let lastBoxArea = null;
+        let frameNo = 0;
 
         const steps = [
             { key: 'front', text: 'Look straight at the camera' },
@@ -163,6 +181,161 @@
             }
         }
 
+        function clamp(n, min, max) { return Math.max(min, Math.min(max, n)); }
+
+        function updateMeshSize() {
+            if (!meshCanvas || !meshCtx) return;
+            const rect = video.getBoundingClientRect();
+            const dpr = window.devicePixelRatio || 1;
+            meshCanvas.width = Math.max(1, Math.round(rect.width * dpr));
+            meshCanvas.height = Math.max(1, Math.round(rect.height * dpr));
+            meshCanvas.style.width = rect.width + "px";
+            meshCanvas.style.height = rect.height + "px";
+            meshCtx.setTransform(1, 0, 0, 1, 0, 0);
+        }
+
+        function applyCoverCropToLandmarks(landmarks) {
+            const iw = video.videoWidth || 1;
+            const ih = video.videoHeight || 1;
+            const a = iw / ih;
+            if (!Number.isFinite(a) || a <= 0) return landmarks;
+            if (a > 1) {
+                const off = (a - 1) / 2;
+                return landmarks.map((p) => ({ ...p, x: p.x * a - off }));
+            }
+            if (a < 1) {
+                const inv = 1 / a;
+                const off = (inv - 1) / 2;
+                return landmarks.map((p) => ({ ...p, y: p.y * inv - off }));
+            }
+            return landmarks;
+        }
+
+        function computeGate(landmarks) {
+            let minX = 1, minY = 1, maxX = 0, maxY = 0;
+            for (const p of landmarks) {
+                if (p.x < minX) minX = p.x;
+                if (p.y < minY) minY = p.y;
+                if (p.x > maxX) maxX = p.x;
+                if (p.y > maxY) maxY = p.y;
+            }
+            minX = clamp(minX, 0, 1); minY = clamp(minY, 0, 1);
+            maxX = clamp(maxX, 0, 1); maxY = clamp(maxY, 0, 1);
+
+            const w = Math.max(0.0001, (maxX - minX));
+            const h = Math.max(0.0001, (maxY - minY));
+            const area = w * h;
+            const cx = (minX + maxX) / 2;
+            const cy = (minY + maxY) / 2;
+
+            const far = area < 0.06;
+            const near = area > 0.30;
+            const tolX = far ? 0.22 : near ? 0.14 : 0.18;
+            const tolY = far ? 0.24 : near ? 0.16 : 0.20;
+
+            const centered = Math.abs(cx - 0.5) <= tolX && Math.abs(cy - 0.5) <= tolY;
+            const goodSize = area >= 0.025 && area <= 0.55;
+            const inFrame = minX > 0.03 && minY > 0.03 && maxX < 0.97 && maxY < 0.97;
+
+            const centerDelta = lastCenter ? Math.hypot(cx - lastCenter.x, cy - lastCenter.y) : 0;
+            const areaDelta = lastBoxArea != null ? Math.abs(area - lastBoxArea) : 0;
+            const stableNow = centerDelta <= 0.018 && areaDelta <= 0.03;
+
+            lastCenter = { x: cx, y: cy };
+            lastBoxArea = area;
+
+            const ok = centered && goodSize && inFrame;
+            if (ok && stableNow) stableCount += 1;
+            else stableCount = 0;
+
+            let reason = "Hold still…";
+            if (!inFrame) reason = "Keep your whole face in frame";
+            else if (!goodSize) reason = area < 0.025 ? "Move closer to the camera" : "Move a bit away";
+            else if (!centered) reason = "Center your face in the circle";
+            else if (!stableNow) reason = "Hold still…";
+
+            return { ok: ok && stableCount >= 2, reason };
+        }
+
+        const faceMesh = new FaceMesh({
+            locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`
+        });
+        faceMesh.setOptions({
+            maxNumFaces: 1,
+            refineLandmarks: true,
+            minDetectionConfidence: 0.5,
+            minTrackingConfidence: 0.5
+        });
+
+        faceMesh.onResults((results) => {
+            if (!meshCtx || !meshCanvas) return;
+            frameNo += 1;
+            meshCtx.clearRect(0, 0, meshCanvas.width, meshCanvas.height);
+
+            const faces = results.multiFaceLandmarks;
+            if (!faces || faces.length === 0) {
+                gateOk = false;
+                gateReason = "Align your face properly";
+                stableCount = 0;
+                lastCenter = null;
+                lastBoxArea = null;
+                return;
+            }
+
+            const lm = faces[0];
+            const drawLm = applyCoverCropToLandmarks(lm);
+
+            // Black tessellation wireframe (like sign-in reference).
+            if (frameNo % 2 === 0) {
+                drawConnectors(meshCtx, drawLm, FACEMESH_TESSELATION, {
+                    color: 'rgba(0, 0, 0, 0.85)',
+                    lineWidth: 1
+                });
+            }
+
+            const gate = computeGate(lm);
+            gateOk = gate.ok;
+            gateReason = gate.reason;
+        });
+
+        async function processMeshFrame() {
+            if (!video || video.readyState < 2) {
+                requestAnimationFrame(processMeshFrame);
+                return;
+            }
+            try {
+                await faceMesh.send({ image: video });
+            } catch (e) {
+                // ignore transient errors while camera starts
+            }
+            requestAnimationFrame(processMeshFrame);
+        }
+
+        function sharpnessScore(canvas) {
+            // Lightweight sharpness score using downscaled luminance gradients.
+            const w = 160;
+            const h = 120;
+            const tmp = document.createElement('canvas');
+            tmp.width = w;
+            tmp.height = h;
+            const tctx = tmp.getContext('2d', { willReadFrequently: true });
+            tctx.drawImage(canvas, 0, 0, w, h);
+            const { data } = tctx.getImageData(0, 0, w, h);
+            let score = 0;
+            for (let y = 1; y < h - 1; y += 2) {
+                for (let x = 1; x < w - 1; x += 2) {
+                    const i = (y * w + x) * 4;
+                    const lum = 0.2126 * data[i] + 0.7152 * data[i + 1] + 0.0722 * data[i + 2];
+                    const lumR = 0.2126 * data[i + 4] + 0.7152 * data[i + 5] + 0.0722 * data[i + 6];
+                    const lumD = 0.2126 * data[i + w * 4] + 0.7152 * data[i + w * 4 + 1] + 0.0722 * data[i + w * 4 + 2];
+                    const dx = lumR - lum;
+                    const dy = lumD - lum;
+                    score += dx * dx + dy * dy;
+                }
+            }
+            return score;
+        }
+
         async function startRegisterCamera() {
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
@@ -170,6 +343,8 @@
                 video.srcObject = stream;
                 await video.play();
                 cancelBtn.style.display = 'inline-flex';
+                updateMeshSize();
+                processMeshFrame();
             } catch (err) {
                 setMessage('Camera access required. Please allow webcam permission.', 'error');
                 cancelBtn.style.display = 'none';
@@ -185,13 +360,27 @@
             cancelBtn.style.display = 'none';
         }
 
-        function captureFrameDataUrl() {
+        async function captureBestFrameDataUrl() {
             const canvas = document.createElement('canvas');
             canvas.width = video.videoWidth || 640;
             canvas.height = video.videoHeight || 480;
             const ctx = canvas.getContext('2d');
-            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-            return canvas.toDataURL('image/jpeg', 0.9);
+
+            let bestUrl = "";
+            let bestScore = -1;
+
+            // Capture a short burst and pick the sharpest frame.
+            for (let i = 0; i < 3; i++) {
+                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                const score = sharpnessScore(canvas);
+                if (score > bestScore) {
+                    bestScore = score;
+                    bestUrl = canvas.toDataURL('image/jpeg', 0.9);
+                }
+                await new Promise((r) => setTimeout(r, 70));
+            }
+
+            return bestUrl || canvas.toDataURL('image/jpeg', 0.9);
         }
 
         form.addEventListener('submit', async (event) => {
@@ -200,8 +389,14 @@
             const fullName = nameInput.value.trim();
             const emailInput = document.getElementById('email');
             const email = (emailInput && emailInput.value ? emailInput.value.trim() : '');
+            const passwordInput = document.getElementById('password');
+            const password = passwordInput ? passwordInput.value : '';
             if (!fullName) {
                 setMessage('Please enter your full name.', 'error');
+                return;
+            }
+            if (!password) {
+                setMessage('Please create a password.', 'error');
                 return;
             }
 
@@ -210,9 +405,14 @@
                 return;
             }
 
+            if (!gateOk) {
+                setMessage(gateReason || 'Align your face properly.', 'error');
+                return;
+            }
+
             const s = steps[stepIndex] || steps[0];
             setMessage(`Capturing (${s.key.toUpperCase()})...`, 'info');
-            const imageData = captureFrameDataUrl();
+            const imageData = await captureBestFrameDataUrl();
 
             try {
                 const response = await fetch('{% url "register-face" %}', {
@@ -221,7 +421,7 @@
                         'Content-Type': 'application/json',
                         'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
                     },
-                    body: JSON.stringify({ fullName, email, direction: s.key, image: imageData }),
+                    body: JSON.stringify({ fullName, email, password, direction: s.key, image: imageData }),
                 });
                 const result = await response.json();
                 if (result.success) {
@@ -246,8 +446,24 @@
             window.location.href = '{% url "welcome" %}';
         });
 
+        (function () {
+            const pwd = document.getElementById('password');
+            const toggle = document.getElementById('passwordToggle');
+            if (!pwd || !toggle) return;
+            toggle.addEventListener('click', () => {
+                const isHidden = pwd.type === 'password';
+                pwd.type = isHidden ? 'text' : 'password';
+                const icon = toggle.querySelector('i');
+                if (icon) {
+                    icon.className = isHidden ? 'ph-bold ph-eye-slash' : 'ph-bold ph-eye';
+                }
+                toggle.setAttribute('aria-label', isHidden ? 'Hide password' : 'Show password');
+            });
+        })();
+
         startRegisterCamera();
         renderStep();
+        window.addEventListener('resize', updateMeshSize);
     </script>
     {% include "_footer.html" %}
 </body>

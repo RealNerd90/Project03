@@ -15,6 +15,10 @@
     <script src="{% static 'theme.js' %}" defer></script>
     <!-- Phosphor Icons -->
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <!-- Mediapip -->
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
 </head>
 
 <body class="bg-gray-light">
@@ -41,11 +45,12 @@
                         <div class="camera-circle">
                             <!-- Outer circle with light blue border -->
                             <div class="camera-inner-circle">
-                                <video id="cameraVideo" autoplay playsinline muted></video>
-                                <canvas id="overlayCanvas" class="overlay-canvas" aria-hidden="true"></canvas>
+                                <div class="camera-frame">
+                                    <video id="cameraVideo" autoplay playsinline muted></video>
+                                    <canvas id="overlayCanvas" class="overlay-canvas"></canvas>
+                                </div>
                                 <div id="cameraOverlay" class="camera-overlay">
-                                    <!-- Inner grey area with user icon (shown until camera starts) -->
-                                    <i class="ph-fill ph-user-circle"></i>
+                                    <!-- Center icon removed -->
                                 </div>
                             </div>
                         </div>
@@ -111,197 +116,318 @@
         const scanButton = document.getElementById('scanButton');
         const scanStatus = document.getElementById('scanStatus');
         const scanCanvas = document.getElementById('scanCanvas');
+        const ctx = overlayCanvas.getContext('2d');
 
         let scanLoopId = null;
         let scanInProgress = false;
+        let lastSendAt = 0;
+        let stableCount = 0;
+        let lastCenter = null; // {x,y} normalized 0..1
+        let lastBoxArea = null; // normalized area
+        let gateOk = false;
+        let gateReason = "Align your face properly";
+        let frameNo = 0;
 
-        function getCookie(name) {
-            const value = `; ${document.cookie}`;
-            const parts = value.split(`; ${name}=`);
-            if (parts.length === 2) return parts.pop().split(';').shift();
+/* ---------------- FACE MESH SETUP ---------------- */
+    const faceMesh = new FaceMesh({
+        locateFile: (file) =>
+            `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`
+    });
+
+    faceMesh.setOptions({
+        maxNumFaces: 1,
+        refineLandmarks: true,
+        minDetectionConfidence: 0.5,
+        minTrackingConfidence: 0.5
+    });
+
+    function clamp(n, min, max) { return Math.max(min, Math.min(max, n)); }
+
+    function applyCoverCropToLandmarks(landmarks) {
+        // The video is rendered into a square frame with object-fit: cover,
+        // so parts of the camera frame may be cropped. MediaPipe landmarks are
+        // normalized to the *uncropped* input image; we transform them to match
+        // the square cover crop so the overlay aligns with the visible face.
+        const iw = video.videoWidth || 1;
+        const ih = video.videoHeight || 1;
+        const a = iw / ih; // input aspect ratio
+
+        if (!Number.isFinite(a) || a <= 0) return landmarks;
+
+        // Container is square (aspect 1). For cover:
+        // - if a > 1 (wider), crop left/right. x' = x*a - (a-1)/2
+        // - if a < 1 (taller), crop top/bottom. y' = y*(1/a) - ((1/a)-1)/2
+        if (a > 1) {
+            const off = (a - 1) / 2;
+            return landmarks.map((p) => ({ ...p, x: p.x * a - off }));
         }
 
-        function setStatus(text, statusType = 'info') {
-            scanStatus.textContent = text;
-            if (statusType === 'success') {
-                scanStatus.style.color = '#16a34a';
-                scanStatus.style.borderColor = 'rgba(22, 163, 74, 0.25)';
-                scanStatus.style.backgroundColor = 'rgba(22, 163, 74, 0.08)';
-            } else if (statusType === 'error') {
-                scanStatus.style.color = '#dc2626';
-                scanStatus.style.borderColor = 'rgba(220, 38, 38, 0.25)';
-                scanStatus.style.backgroundColor = 'rgba(220, 38, 38, 0.08)';
-            } else {
-                scanStatus.style.color = '#0b69ff';
-                scanStatus.style.borderColor = 'rgba(11, 105, 255, 0.2)';
-                scanStatus.style.backgroundColor = 'rgba(11, 105, 255, 0.08)';
-            }
+        if (a < 1) {
+            const inv = 1 / a;
+            const off = (inv - 1) / 2;
+            return landmarks.map((p) => ({ ...p, y: p.y * inv - off }));
         }
 
-        async function startCamera() {
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
-                video.srcObject = stream;
-                video.onloadedmetadata = () => {
-                    video.play();
-                    overlay.classList.add('hidden');
-                    updateOverlaySize();
-                };
-            } catch (err) {
-                console.error('Camera access denied or unavailable', err);
-                setStatus('Unable to access camera. Please allow camera permission.', true);
-            }
+        return landmarks;
+    }
+
+    function computeGate(landmarks) {
+        // Compute normalized bounding box of landmarks.
+        let minX = 1, minY = 1, maxX = 0, maxY = 0;
+        for (const p of landmarks) {
+            if (p.x < minX) minX = p.x;
+            if (p.y < minY) minY = p.y;
+            if (p.x > maxX) maxX = p.x;
+            if (p.y > maxY) maxY = p.y;
         }
+        minX = clamp(minX, 0, 1); minY = clamp(minY, 0, 1);
+        maxX = clamp(maxX, 0, 1); maxY = clamp(maxY, 0, 1);
 
-        function clearOverlay() {
-            const ctx = overlayCanvas.getContext('2d');
-            ctx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
-        }
+        const w = Math.max(0.0001, (maxX - minX));
+        const h = Math.max(0.0001, (maxY - minY));
+        const area = w * h;
+        const cx = (minX + maxX) / 2;
+        const cy = (minY + maxY) / 2;
 
-        function drawBox(box, color = 'red', label = '') {
-            // No visible box: we use status teks to guide the user.
-            // This function is intentionally blank to keep UI clean.
-            clearOverlay();
-        }
+        // Adaptive thresholds:
+        // - When face is far (small area), allow more center tolerance.
+        // - When face is close (large area), require slightly tighter centering to avoid crop.
+        const far = area < 0.06;
+        const near = area > 0.30;
+        const tolX = far ? 0.22 : near ? 0.14 : 0.18;
+        const tolY = far ? 0.24 : near ? 0.16 : 0.20;
 
-        function updateOverlaySize() {
-            const rect = video.getBoundingClientRect();
-            const vidWidth = video.videoWidth || rect.width;
-            const vidHeight = video.videoHeight || rect.height;
+        const centered = Math.abs(cx - 0.5) <= tolX && Math.abs(cy - 0.5) <= tolY;
+        // Wider size range so it works from farther away and closer up.
+        const goodSize = area >= 0.025 && area <= 0.55; // too small / too close
+        const inFrame = minX > 0.03 && minY > 0.03 && maxX < 0.97 && maxY < 0.97;
 
-            overlayCanvas.width = vidWidth;
-            overlayCanvas.height = vidHeight;
-            overlayCanvas.style.width = `${rect.width}px`;
-            overlayCanvas.style.height = `${rect.height}px`;
-        }
+        // Stability: center + size change small across frames
+        const centerDelta = lastCenter ? Math.hypot(cx - lastCenter.x, cy - lastCenter.y) : 0;
+        const areaDelta = lastBoxArea != null ? Math.abs(area - lastBoxArea) : 0;
+        const stableNow = centerDelta <= 0.018 && areaDelta <= 0.03;
 
-        async function captureAndSend() {
-            if (!video.srcObject) {
-                setStatus('Camera not ready yet. Please allow access and try again.', true);
-                return;
-            }
+        lastCenter = { x: cx, y: cy };
+        lastBoxArea = area;
 
-            if (scanInProgress) return;
-            scanInProgress = true;
+        const ok = centered && goodSize && inFrame;
+        if (ok && stableNow) stableCount += 1;
+        else stableCount = 0;
 
-            scanButton.disabled = true;
-            setStatus('Capturing...');
+        let reason = "Hold still…";
+        if (!inFrame) reason = "Keep your whole face in frame";
+        else if (!goodSize) reason = area < 0.025 ? "Move closer to the camera" : "Move a bit away";
+        else if (!centered) reason = "Center your face in the circle";
+        else if (!stableNow) reason = "Hold still…";
 
-            // Ensure overlay canvas matches video size
-            updateOverlaySize();
+        // Faster gating: fewer stable frames required.
+        return { ok: ok && stableCount >= 2, reason };
+    }
 
-            const width = video.videoWidth;
-            const height = video.videoHeight;
-            scanCanvas.width = width;
-            scanCanvas.height = height;
-            const ctx = scanCanvas.getContext('2d');
-            ctx.drawImage(video, 0, 0, width, height);
+    faceMesh.onResults((results) => {
+        frameNo += 1;
+        ctx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
 
-            const dataUrl = scanCanvas.toDataURL('image/jpeg', 0.9);
+        if (results.multiFaceLandmarks) {
+            for (const landmarks of results.multiFaceLandmarks) {
+                const drawLm = applyCoverCropToLandmarks(landmarks);
 
-            try {
-                const response = await fetch(scanForm.action, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': getCookie('csrftoken'),
-                    },
-                    body: JSON.stringify({ image: dataUrl }),
-                });
-
-                const result = await response.json();
-                if (result.success) {
-                    setStatus(`Welcome, ${result.name}! Redirecting...`, 'success');
-
-                    const timestamp = result.timestamp ? new Date(result.timestamp) : new Date();
-                    const date = timestamp.toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
-                    const time = timestamp.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-
-                    setTimeout(() => {
-                        const params = new URLSearchParams({ name: result.name || '', date, time });
-
-                        // Capture live GPS at sign-in time (display only).
-                        if (navigator.geolocation) {
-                            navigator.geolocation.getCurrentPosition(
-                                (pos) => {
-                                    const lat = pos.coords.latitude;
-                                    const lon = pos.coords.longitude;
-                                    const accuracy = pos.coords.accuracy;
-                                    params.set('lat', String(lat));
-                                    params.set('lon', String(lon));
-                                    params.set('acc', String(accuracy));
-                                    window.location.href = `/signin/success/?${params.toString()}`;
-                                },
-                                () => {
-                                    window.location.href = `/signin/success/?${params.toString()}`;
-                                },
-                                { enableHighAccuracy: true, maximumAge: 0, timeout: 3000 }
-                            );
-                            return;
-                        }
-
-                        window.location.href = `/signin/success/?${params.toString()}`;
-                    }, 1000);
-
-                    stopScanLoop(false);
-                    return;
+                // Black wireframe (like reference): use tessellation triangles.
+                // Draw every other frame for performance.
+                if (frameNo % 2 === 0) {
+                    drawConnectors(ctx, drawLm, FACEMESH_TESSELATION, {
+                        color: 'rgba(0, 0, 0, 0.85)',
+                        lineWidth: 1
+                    });
                 }
 
-                // Face not recognized / no face detected
-                if (result.box) {
-                    const box = result.box;
-                    const frameArea = video.videoWidth * video.videoHeight;
-                    const faceArea = (box[2] - box[0]) * (box[3] - box[1]);
-                    const percent = faceArea / frameArea;
-
-                    if (percent < 0.06) {
-                        setStatus('Move closer to the camera.', 'error');
-                    } else if (percent > 0.35) {
-                        setStatus('Move a bit away from the camera.', 'error');
-                    } else {
-                        setStatus('Hold still and look at the camera.', 'info');
-                    }
-                } else {
-                    setStatus(result.message || 'No face detected. Please center your face.', 'error');
-                }
-            } catch (err) {
-                console.error('Error during face recognition request', err);
-                setStatus('Error communicating with server. Please try again.', true);
-            } finally {
-                scanButton.disabled = false;
-                scanInProgress = false;
+                const gate = computeGate(landmarks);
+                gateOk = gate.ok;
+                gateReason = gate.reason;
+                setStatus(gateOk ? "Face ready ✔" : gateReason, gateOk ? "success" : "info");
             }
+        } else {
+            gateOk = false;
+            stableCount = 0;
+            lastCenter = null;
+            lastBoxArea = null;
+            setStatus("Align your face properly", "info");
+        }
+    });
+
+    /* ---------------- CAMERA ---------------- */
+    async function startCamera() {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({
+                video: { facingMode: "user" }
+            });
+
+            video.srcObject = stream;
+
+            video.onloadedmetadata = () => {
+                video.play();
+                overlay.classList.add('hidden');
+                updateOverlaySize();
+
+                // START FACE MESH LOOP
+                processFrame();
+            };
+
+        } catch (err) {
+            console.error(err);
+            setStatus('Allow camera permission!', 'error');
+        }
+    }
+
+    /* ---------------- PROCESS FRAME ---------------- */
+    async function processFrame() {
+        if (video.readyState >= 2) {
+            await faceMesh.send({ image: video });
+        }
+        requestAnimationFrame(processFrame);
+    }
+
+    /* ---------------- UI HELPERS ---------------- */
+    function updateOverlaySize() {
+        const frame = document.querySelector('.camera-frame');
+        const rect = (frame || video).getBoundingClientRect();
+        const dpr = window.devicePixelRatio || 1;
+
+        // Match the displayed circle size for perfect landmark alignment.
+        overlayCanvas.width = Math.max(1, Math.round(rect.width * dpr));
+        overlayCanvas.height = Math.max(1, Math.round(rect.height * dpr));
+        overlayCanvas.style.width = rect.width + "px";
+        overlayCanvas.style.height = rect.height + "px";
+
+        // Do NOT apply an extra transform here.
+        // MediaPipe drawing utils already scale normalized landmarks by canvas.width/height.
+        // Applying ctx.setTransform(dpr, ...) would double-scale and misalign the mesh.
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+    }
+
+    function setStatus(text, type = "info") {
+        if (!scanStatus) return;
+        scanStatus.textContent = text;
+
+        if (type === "success") scanStatus.style.color = "#16a34a";
+        else if (type === "error") scanStatus.style.color = "#dc2626";
+        else scanStatus.style.color = "#0b69ff";
+    }
+
+    /* ---------------- CAPTURE & SEND ---------------- */
+    async function captureAndSend() {
+
+        if (!video.srcObject) {
+            setStatus("Camera not ready", "error");
+            return;
         }
 
-        function startScanLoop() {
-            if (scanLoopId) return;
-            scanButton.textContent = 'Scanning...';
-            scanLoopId = window.setInterval(captureAndSend, 800);
+        if (!gateOk) {
+            setStatus(gateReason || "Align your face properly", "info");
+            return;
         }
 
-        function stopScanLoop(clear = true) {
-            if (scanLoopId) {
-                clearInterval(scanLoopId);
-                scanLoopId = null;
-            }
-            scanButton.textContent = 'Scan Now';
-            if (clear) {
-                clearOverlay();
-            }
+        const now = Date.now();
+        // Faster retries while still protecting the server.
+        if (now - lastSendAt < 600) {
+            return;
+        }
+        lastSendAt = now;
+
+        if (scanInProgress) return;
+        scanInProgress = true;
+
+        if (scanButton) scanButton.disabled = true;
+        setStatus("Verifying…", "info");
+
+        const width = video.videoWidth;
+        const height = video.videoHeight;
+
+        if (!scanCanvas || !width || !height) {
+            setStatus("Camera not ready", "error");
+            if (scanButton) scanButton.disabled = false;
+            scanInProgress = false;
+            return;
         }
 
-        scanForm.addEventListener('submit', (event) => {
-            event.preventDefault();
-            if (scanLoopId) {
+        scanCanvas.width = width;
+        scanCanvas.height = height;
+
+        const ctx2 = scanCanvas.getContext('2d');
+        ctx2.drawImage(video, 0, 0, width, height);
+
+        const dataUrl = scanCanvas.toDataURL('image/jpeg', 0.9);
+
+        try {
+            const response = await fetch(scanForm.action, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken'),
+                },
+                body: JSON.stringify({ image: dataUrl }),
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                setStatus(`Welcome ${result.name}`, "success");
                 stopScanLoop();
+                // Session is set server-side in views.signin_scan.
+                // Show the Sign-in Successful page (then it redirects to dashboard).
+                setTimeout(() => {
+                    const ts = result.timestamp ? new Date(result.timestamp) : new Date();
+                    const date = ts.toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
+                    const time = ts.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                    const params = new URLSearchParams({ name: result.name || '', date, time });
+                    window.location.href = `{% url "signin-success" %}?${params.toString()}`;
+                }, 450);
             } else {
-                startScanLoop();
+                setStatus(result.message || "Face not recognized", "error");
             }
-        });
 
-        startCamera();
-        window.addEventListener('resize', updateOverlaySize);
-    </script>
+        } catch (err) {
+            console.error(err);
+            setStatus("Server error", "error");
+        }
+
+        if (scanButton) scanButton.disabled = false;
+        scanInProgress = false;
+    }
+
+    /* ---------------- SCAN LOOP ---------------- */
+    function startScanLoop() {
+        if (scanLoopId) return;
+        // Check frequently; gate + cooldown ensure server isn't spammed.
+        scanLoopId = setInterval(captureAndSend, 250);
+        if (scanButton) scanButton.innerHTML = "Scanning...";
+    }
+
+    function stopScanLoop() {
+        if (!scanLoopId) return;
+        clearInterval(scanLoopId);
+        scanLoopId = null;
+        if (scanButton) scanButton.innerHTML = '<i class="ph ph-webcam"></i> Scan Now';
+    }
+
+    if (scanForm) {
+        scanForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            scanLoopId ? stopScanLoop() : startScanLoop();
+        });
+    }
+
+    /* ---------------- COOKIE ---------------- */
+    function getCookie(name) {
+        const value = `; ${document.cookie}`;
+        const parts = value.split(`; ${name}=`);
+        if (parts.length === 2) return parts.pop().split(';').shift();
+    }
+
+    /* ---------------- INIT ---------------- */
+    startCamera();
+    window.addEventListener('resize', updateOverlaySize);
+</script>
 </body>
 
 </html>
