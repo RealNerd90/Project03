@@ -4657,6 +4657,21 @@ input:checked+.slider:before {
 }
 
 @media (min-width: 1800px) {
+
+    .max-w-4xl {
+        max-width: 70rem;
+    }
+
+    .max-w-6xl {
+        max-width: 90rem;
+    }
+}
+
+@media (min-width: 2400px) {
+    .max-w-6xl {
+        max-width: 110rem;
+    }
+
     .max-w-4xl {
         max-width: 70rem;
     }
