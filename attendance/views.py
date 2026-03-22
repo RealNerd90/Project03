@@ -1076,4 +1076,3 @@ def create_attendance_record(request: HttpRequest) -> JsonResponse:
         )
     except Exception as exc:  # pragma: no cover - defensive
         return JsonResponse({"detail": f"Error creating record: {exc}"}, status=500)
-

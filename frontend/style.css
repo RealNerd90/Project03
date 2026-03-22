@@ -713,10 +713,12 @@ body.home-fixed .signin-footer {
         .welcome-title {
             font-size: 2.2rem !important;
         }
+
         .welcome-subtitle {
             font-size: 1rem !important;
             max-width: 240px;
         }
+
         .camera-circle {
             width: 250px !important;
             height: 250px !important;
@@ -2605,7 +2607,7 @@ body.profile-fixed .signin-footer {
 }
 
 .profile-card {
-    width: min(980px, 96vw);
+    width: min(820px, 96vw);
     background: #ffffff;
     border-radius: 22px;
     border: 1px solid rgba(15, 23, 42, 0.08);
@@ -2614,7 +2616,7 @@ body.profile-fixed .signin-footer {
 }
 
 .profile-hero {
-    background: linear-gradient(180deg, #eaf4ff 0%, #f4f9ff 60%, #ffffff 100%);
+    background: linear-gradient(180deg, #c1e0ff 0%, #eaf4ff 50%, #ffffff 100%);
     padding: 44px 20px 28px;
     display: flex;
     flex-direction: column;
@@ -2716,7 +2718,7 @@ body.profile-fixed .signin-footer {
 }
 
 .profile-sections {
-    padding: 28px 30px 34px;
+    padding: 36px 48px 44px;
 }
 
 .profile-section {
@@ -2745,14 +2747,14 @@ body.profile-fixed .signin-footer {
 .profile-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 22px 34px;
-    padding: 10px 2px 0;
+    gap: 36px 48px;
+    padding: 16px 2px 0;
 }
 
 .profile-field {
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 10px;
 }
 
 .profile-label {
@@ -2815,12 +2817,12 @@ html[data-theme="dark"] .profile-role-pill {
 
 @media (max-width: 720px) {
     .profile-sections {
-        padding: 22px 18px 26px;
+        padding: 28px 24px 32px;
     }
 
     .profile-grid {
         grid-template-columns: 1fr;
-        gap: 16px;
+        gap: 24px;
     }
 }
 
@@ -3803,17 +3805,16 @@ html[data-theme="dark"] .cselect-item.active {
 }
 
 .scanner-title {
-    font-size: 2.25rem;
+    font-size: 35px;
     font-weight: 700;
     color: var(--text-dark);
-    margin-bottom: 0.5rem;
-    padding-top: 1.5rem;
+    margin-bottom: 0.25rem;
 }
 
 .scanner-subtitle {
-    font-size: 1.1rem;
+    font-size: 20px;
     color: var(--text-gray);
-    margin-bottom: 1rem;
+    margin-bottom: 0.5rem;
 }
 
 /* Central Scanner Circle */
@@ -3824,6 +3825,8 @@ html[data-theme="dark"] .cselect-item.active {
     justify-content: center;
     align-items: center;
     position: relative;
+    margin: 0 auto;
+    flex-shrink: 1;
 }
 
 .scanner-ring-outer {
@@ -4229,10 +4232,23 @@ html[data-theme="dark"] .cselect-item.active {
     position: relative;
     overflow: hidden;
     margin: auto;
+    height: 100%;
+    max-height: 700px;
+    width: min(680px, 100%);
+    background: #fff;
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-lg);
+    padding: 2.5rem 3rem;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
 }
 
 .scanner-header {
-    margin-bottom: 1.75rem;
+    margin-bottom: 0;
+    text-align: center;
+    flex-shrink: 0;
 }
 
 .scanner-center {
@@ -4240,6 +4256,11 @@ html[data-theme="dark"] .cselect-item.active {
     flex-direction: column;
     align-items: center;
     gap: 1.25rem;
+    justify-content: space-evenly;
+    flex: 1 1 auto;
+    min-height: 0;
+    width: 100%;
+    padding: 1rem 0;
 }
 
 #scannerVideo {
@@ -4276,13 +4297,16 @@ html[data-theme="dark"] .cselect-item.active {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 0.75rem;
-    padding: 0.85rem 1.25rem;
+    gap: 0.5rem;
+    padding: 1.2rem 1rem;
     border-radius: var(--radius-xl);
     background: rgba(10, 125, 255, 0.13);
     color: var(--primary-blue);
     font-weight: 600;
-    max-width: 100%;
+    font-size: 13px;
+    width: 100%;
+    max-width: 400px;
+    text-align: center;
 }
 
 .scanner-actions {
@@ -4294,8 +4318,8 @@ html[data-theme="dark"] .cselect-item.active {
 }
 
 .btn-md {
-    padding: 0.65rem 1.25rem;
-    font-size: 0.95rem;
+    padding: 1rem 1.5rem;
+    font-size: 13px;
 }
 
 .scanner-footer {
@@ -4957,6 +4981,20 @@ input:checked+.slider:before {
 }
 
 @media (min-width: 1800px) {
+    .max-w-4xl {
+        max-width: 70rem;
+    }
+
+    .max-w-6xl {
+        max-width: 90rem;
+    }
+}
+
+@media (min-width: 2400px) {
+    .max-w-6xl {
+        max-width: 110rem;
+    }
+
     .max-w-4xl {
         max-width: 70rem;
     }
