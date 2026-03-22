@@ -20,7 +20,7 @@
 </head>
 
 <body class="home-fixed">
-    <nav class="navbar">
+    <nav class="navbar desktop-only">
         <div class="logo">
             <i class="ph-fill ph-check-square-offset"></i>
             <span>AttendancePro</span>
@@ -29,7 +29,17 @@
 
     <main class="hero-section">
         <div class="hero-content">
-            <div class="pill-badge">
+            <!-- Mobile Only Hero Icon -->
+            <div class="mobile-only mobile-hero-icon">
+                <div class="icon-circle">
+                    <i class="ph-fill ph-user-focus"></i>
+                    <div class="icon-badge">
+                        <i class="ph-fill ph-shield-check"></i>
+                    </div>
+                </div>
+            </div>
+
+            <div class="pill-badge desktop-only">
                 <i class="ph-bold ph-lightning"></i> MODERN MANAGEMENT
             </div>
 
@@ -38,16 +48,27 @@
             </h1>
 
             <p class="hero-description">
-                A modern attendance management system for organizations and schools to track productivity and streamline
-                collaboration with ease.
+                <span class="desktop-only">A modern attendance management system for organizations and schools to track productivity and streamline collaboration with ease.</span>
+                <span class="mobile-only">Effortless check-ins with secure face recognition technology.</span>
             </p>
 
             <div class="hero-actions">
-                <a href="{% url 'signin' %}" class="btn btn-primary btn-large">Sign In</a>
-                <a href="{% url 'register' %}" class="btn btn-outline btn-large">Register</a>
+                <a href="{% url 'signin' %}" class="btn btn-primary btn-large btn-mobile-rounded">
+                    <i class="ph-bold ph-sign-in mobile-only icon-btn-left"></i> Sign In
+                </a>
+                <a href="{% url 'register' %}" class="btn btn-outline btn-large btn-mobile-rounded">
+                    <i class="ph-bold ph-user-plus mobile-only icon-btn-left"></i> <span class="desktop-only">Register</span><span class="mobile-only">Register Face</span>
+                </a>
             </div>
 
-            <div class="trusted-by">
+            <!-- Mobile Only Footer Links -->
+            <div class="mobile-only mobile-footer-extras">
+                <div class="security-note">
+                    <i class="ph-fill ph-shield-check"></i> Securely encrypted biometric data
+                </div>
+            </div>
+
+            <div class="trusted-by desktop-only">
                 <p>TRUSTED BY LEADING TEAMS</p>
                 <div class="trusted-logos">
                     <div class="logo-item">

@@ -338,7 +338,14 @@
 
         async function startRegisterCamera() {
             try {
-                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: {
+                        facingMode: 'user',
+                        width: { ideal: 640 },
+                        height: { ideal: 480 },
+                        frameRate: { ideal: 60, min: 30 }
+                    }
+                });
                 currentStream = stream;
                 video.srcObject = stream;
                 await video.play();
