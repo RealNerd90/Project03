@@ -15,6 +15,6 @@ def get_system() -> AttendanceSystem:
     """
     global _system
     if _system is None:
-        _system = AttendanceSystem(database_path="sample_faces")
+        _system = AttendanceSystem(database_path="media")
     return _system
 

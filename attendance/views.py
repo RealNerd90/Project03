@@ -43,7 +43,7 @@ def _profile_photo_url_for(display_name: str | None) -> str:
         return ""
     profile_photo_folder = os.path.join(
         os.path.dirname(os.path.dirname(__file__)),
-        "frontend",
+        "static",
         "profile_photos",
     )
     photo_filename = f"{slugify(safe_name)}.jpg"
@@ -226,25 +226,292 @@ def admin_dashboard(request: HttpRequest) -> HttpResponse:
 
 
 def analytics(request: HttpRequest) -> HttpResponse:
-    """Render the analytics page."""
-    # Load recent attendance entries for the current signed-in person only.
+    """Render the analytics page with real-time statistics and trends."""
     display_name = _normalize_display_name(request.session.get("display_name"))
     profile_photo_url = _profile_photo_url_for(display_name)
+    
     if display_name == "Visitor":
-        attendance_records = AttendanceRecord.objects.none()
-    else:
-        attendance_records = (
-            AttendanceRecord.objects.filter(name=display_name)
-            .order_by("-date", "-time")[:50]
+        return redirect("signin")
+
+    # Get date range from request or default to last 30 days
+    today = timezone.localdate()
+    default_start = today - timedelta(days=29)
+    
+    start_date_str = request.GET.get("start_date")
+    end_date_str = request.GET.get("end_date")
+    
+    try:
+        if start_date_str:
+            start_date = datetime.strptime(start_date_str, "%Y-%m-%d").date()
+        else:
+            start_date = default_start
+            
+        if end_date_str:
+            end_date = datetime.strptime(end_date_str, "%Y-%m-%d").date()
+        else:
+            end_date = today
+    except ValueError:
+        start_date = default_start
+        end_date = today
+
+    # Limit range to 30 days as requested
+    if (end_date - start_date).days > 30:
+        end_date = start_date + timedelta(days=30)
+
+    # Fetch records for the user in the selected period
+    records = AttendanceRecord.objects.filter(
+        name=display_name,
+        date__range=[start_date, end_date]
+    ).order_by("date", "time")
+
+    # Calculate Stats
+    total_days = (end_date - start_date).days + 1
+    
+    # Identify working days (Mon-Fri)
+    working_dates = []
+    curr = start_date
+    while curr <= end_date:
+        if curr.weekday() < 5:  # 0-4 is Mon-Fri
+            working_dates.append(curr)
+        curr += timedelta(days=1)
+    
+    total_working_days = len(working_dates)
+    present_dates = set(records.values_list("date", flat=True))
+    present_count = len(present_dates)
+    
+    attendance_rate = (present_count / total_working_days * 100) if total_working_days > 0 else 0
+    
+    # Total Hours Worked
+    total_seconds = 0
+    for r in records:
+        if r.time and r.check_out_time:
+            # Simple duration within the same day
+            dt1 = datetime.combine(r.date, r.time)
+            dt2 = datetime.combine(r.date, r.check_out_time)
+            if dt2 > dt1:
+                total_seconds += (dt2 - dt1).total_seconds()
+            else:
+                # Handle overnight if necessary (though unlikely for this app)
+                total_seconds += (dt2 + timedelta(days=1) - dt1).total_seconds()
+    
+    total_hours = total_seconds / 3600.0
+    
+    # Leaves (Gaps in working days)
+    leaves_taken = total_working_days - present_count
+    
+    # Punctuality (Cutoff: 9:00 AM)
+    ON_TIME_CUTOFF = time_cls(9, 0)
+    total_checkins = records.filter(time__isnull=False).count()
+    on_time_checkins = records.filter(time__lte=ON_TIME_CUTOFF).count()
+    punctuality_score = (on_time_checkins / total_checkins * 100) if total_checkins > 0 else 0
+    
+    # Previous period for comparison (last 30 days before current range)
+    prev_end = start_date - timedelta(days=1)
+    prev_start = prev_end - timedelta(days=(end_date - start_date).days)
+    prev_records = AttendanceRecord.objects.filter(
+        name=display_name,
+        date__range=[prev_start, prev_end]
+    )
+    prev_present_count = len(set(prev_records.values_list("date", flat=True)))
+    
+    # Calculate working days for previous period
+    prev_working_count = 0
+    curr = prev_start
+    while curr <= prev_end:
+        if curr.weekday() < 5:
+            prev_working_count += 1
+        curr += timedelta(days=1)
+        
+    prev_rate = (prev_present_count / prev_working_count * 100) if prev_working_count > 0 else 0
+    rate_diff = attendance_rate - prev_rate
+
+    # Trend Graph Data (Daily check-in times)
+    trend_data = []
+    curr = start_date
+    while curr <= end_date:
+        # Get first check-in of the day
+        day_rec = records.filter(date=curr, time__isnull=False).order_by("time").first()
+        if day_rec:
+            # Convert time to decimal hours for the graph (e.g. 8:30 -> 8.5)
+            h = day_rec.time.hour + (day_rec.time.minute / 60.0)
+            trend_data.append({"date": curr.strftime("%b %d"), "hour": round(h, 2), "label": day_rec.time.strftime("%I:%M %p")})
+        else:
+            trend_data.append({"date": curr.strftime("%b %d"), "hour": None, "label": "No Data"})
+        curr += timedelta(days=1)
+
+    # Recent Activity
+    activities = []
+    # Get last 10 records for detailed activity
+    recent_recs = AttendanceRecord.objects.filter(name=display_name).order_by("-date", "-created_at")[:10]
+    for r in recent_recs:
+        if r.time:
+            is_on_time = r.time <= ON_TIME_CUTOFF
+            activities.append({
+                "kind": "checkin",
+                "title": "Checked In",
+                "time_label": f"{r.date.strftime('%b %d')} • {r.time.strftime('%I:%M %p')}",
+                "meta": "On Time" if is_on_time else "Late Arrival",
+                "icon": "ph-sign-in",
+                "color_class": "bg-green-light text-green" if is_on_time else "bg-orange-light text-orange"
+            })
+        if r.check_out_time:
+            # Calculate duration for this specific checkout
+            duration_str = ""
+            if r.time:
+                dt1 = datetime.combine(r.date, r.time)
+                dt2 = datetime.combine(r.date, r.check_out_time)
+                diff = (dt2 - dt1).total_seconds() / 3600.0 if dt2 > dt1 else 0
+                duration_str = f" • {diff:.1f}h Worked"
+                
+            activities.append({
+                "kind": "checkout",
+                "title": "Checked Out",
+                "time_label": f"{r.date.strftime('%b %d')} • {r.check_out_time.strftime('%I:%M %p')}",
+                "meta": f"Daily Session{duration_str}",
+                "icon": "ph-sign-out",
+                "color_class": "bg-blue-light text-primary"
+            })
+
+    # Streaks (Punctuality streak)
+    streak_count = 0
+    for r in recent_recs:
+        if r.time and r.time <= ON_TIME_CUTOFF:
+            streak_count += 1
+        elif r.time:
+            break
+
+    # Progress bar percentages
+    hours_goal = 160.0  # Default goal
+    hours_pct = (total_hours / hours_goal * 100) if hours_goal > 0 else 0
+    leaves_pct = (leaves_taken / 5 * 100) if 5 > 0 else 0 # Assuming 5 is a "high" number for visualization
+
+    # --- NEW: Summary Dashboard Calculations ---
+    # 1. Monthly Summary (Last 6 Months)
+    monthly_summary = []
+    for i in range(6):
+        # Calculate month and year
+        target_month_date = today.replace(day=1) - timedelta(days=1) if today.day == 1 else today.replace(day=1)
+        for _ in range(i):
+            target_month_date = target_month_date.replace(day=1) - timedelta(days=1)
+        
+        m_year = target_month_date.year
+        m_month = target_month_date.month
+        month_name = target_month_date.strftime("%b").upper()
+        
+        # Monthly records
+        m_records = AttendanceRecord.objects.filter(
+            name=display_name,
+            date__year=m_year,
+            date__month=m_month
         )
+
+        # Working days in this month
+        m_cal = calendar.monthcalendar(m_year, m_month)
+        m_working_days = 0
+        for week in m_cal:
+            for day_idx in range(5): # Mon-Fri
+                if week[day_idx] != 0:
+                    m_working_days += 1
+        
+        # Monthly records - only first check-in of each day for punctuality
+        m_day_records = m_records.filter(time__isnull=False).order_by("date", "time")
+        m_first_checkins = {}
+        for r in m_day_records:
+            if r.date not in m_first_checkins:
+                m_first_checkins[r.date] = r.time
+        
+        m_present_count = len(m_first_checkins)
+        m_late_count = sum(1 for t in m_first_checkins.values() if t > ON_TIME_CUTOFF)
+        m_absent_count = max(0, m_working_days - m_present_count)
+        
+        monthly_summary.append({
+            "month": month_name,
+            "present": m_present_count,
+            "absent": m_absent_count,
+            "late": m_late_count,
+            "rate": (m_present_count / m_working_days * 100) if m_working_days > 0 else 0
+        })
+
+    # 2. Time Distribution (Selected Period)
+    # Early: < 8:45 AM, On Time: 8:45-9:00 AM, Late: > 9:00 AM
+    # Again, only first check-in of each day
+    EARLY_CUTOFF = time_cls(8, 45)
+    period_first_checkins = {}
+    for r in records.filter(time__isnull=False).order_by("date", "time"):
+        if r.date not in period_first_checkins:
+            period_first_checkins[r.date] = r.time
+            
+    total_arrivals = len(period_first_checkins)
+    early_count = sum(1 for t in period_first_checkins.values() if t < EARLY_CUTOFF)
+    ontime_count = sum(1 for t in period_first_checkins.values() if EARLY_CUTOFF <= t <= ON_TIME_CUTOFF)
+    late_count = sum(1 for t in period_first_checkins.values() if t > ON_TIME_CUTOFF)
+    
+    early_pct = (early_count / total_arrivals * 100) if total_arrivals > 0 else 0
+    ontime_pct = (ontime_count / total_arrivals * 100) if total_arrivals > 0 else 0
+    late_pct = (late_count / total_arrivals * 100) if total_arrivals > 0 else 0
+    
+    # Efficiency is a mix of attendance and punctuality
+    efficiency = (attendance_rate * 0.7 + punctuality_score * 0.3) if total_arrivals > 0 else attendance_rate
+
+    # 3. Performance Insights
+    most_consistent = max(monthly_summary, key=lambda x: x["rate"]) if monthly_summary else None
+    
+    # Longest Streak (All-time or at least last 100 records)
+    all_recs = AttendanceRecord.objects.filter(name=display_name).order_by("date")
+    max_streak = 0
+    current_streak = 0
+    last_date = None
+    for r in all_recs:
+        if last_date and (r.date - last_date).days == 1:
+            current_streak += 1
+        elif last_date and (r.date - last_date).days > 1:
+            # Check if gap was only weekends
+            is_weekend_gap = True
+            check_date = last_date + timedelta(days=1)
+            while check_date < r.date:
+                if check_date.weekday() < 5:
+                    is_weekend_gap = False
+                    break
+                check_date += timedelta(days=1)
+            
+            if is_weekend_gap:
+                current_streak += 1
+            else:
+                max_streak = max(max_streak, current_streak)
+                current_streak = 1
+        else:
+            current_streak = 1
+        last_date = r.date
+    max_streak = max(max_streak, current_streak)
 
     return render(
         request,
         "analytics.html",
         {
-            "attendance_records": attendance_records,
-            "profile_photo_url": profile_photo_url,
             "display_name": display_name,
+            "profile_photo_url": profile_photo_url,
+            "start_date": start_date,
+            "end_date": end_date,
+            "attendance_rate": round(attendance_rate, 1),
+            "rate_diff": round(rate_diff, 1),
+            "total_hours": round(total_hours, 1),
+            "hours_pct": min(100, round(hours_pct, 1)),
+            "leaves_taken": leaves_taken,
+            "leaves_pct": min(100, round(leaves_pct, 1)),
+            "punctuality_score": int(punctuality_score),
+            "trend_data_json": json.dumps(trend_data),
+            "recent_activities": activities[:5],
+            "streak_count": streak_count,
+            "attendance_records": records.order_by("-date", "-time")[:50],
+            # New Data
+            "monthly_summary": monthly_summary,
+            "early_pct": round(early_pct),
+            "ontime_pct": round(ontime_pct),
+            "late_pct": round(late_pct),
+            "efficiency": round(efficiency),
+            "most_consistent_month": most_consistent["month"] if most_consistent else "N/A",
+            "most_consistent_rate": round(most_consistent["rate"]) if most_consistent else 0,
+            "longest_streak": max_streak,
         },
     )
 
@@ -322,7 +589,7 @@ def profile_view(request: HttpRequest) -> HttpResponse:
             "profile_photo_url": profile_photo_url,
             "profile_name": display_name,
             "emp_id": emp_id,
-            "role_title": "Senior Product Designer",
+            "role_title": role_label or "Member",
             "full_name": display_name,
             "date_of_birth": dob_display,
             "gender": gender,
@@ -432,8 +699,8 @@ def profile_edit_view(request: HttpRequest) -> HttpResponse:
         "display_name": display_name,
         "profile_photo_url": profile_photo_url,
         "full_name": display_name,
-        "email": email or "alex.henderson@company.com",
-        "phone": phone or "+1 (555) 000-1234",
+        "email": email or "",
+        "phone": phone or "",
         "date_of_birth": dob_display or "05/15/1992",
         "dob_iso": dob_iso,
         "gender": gender or "Male",
@@ -456,7 +723,7 @@ def settings_view(request: HttpRequest) -> HttpResponse:
             email = ""
 
     # Handle profile photo upload/remove actions
-    profile_photo_folder = os.path.join(os.path.dirname(os.path.dirname(__file__)), "frontend", "profile_photos")
+    profile_photo_folder = os.path.join(os.path.dirname(os.path.dirname(__file__)), "static", "profile_photos")
     os.makedirs(profile_photo_folder, exist_ok=True)
     photo_filename = f"{slugify(display_name)}.jpg"
     profile_photo_path = os.path.join(profile_photo_folder, photo_filename)
@@ -946,7 +1213,7 @@ def register_face(request: HttpRequest) -> HttpResponse:
             return JsonResponse({"success": False, "error": f"Could not process image: {exc}"}, status=400)
 
         system = get_system()
-        # Save as multi-angle references: sample_faces/<Name>/<direction>.jpg
+        # Save as multi-angle references: media/<Name>/<direction>.jpg
         student_dir = os.path.join(system.database_path, full_name)
         os.makedirs(student_dir, exist_ok=True)
         save_path = os.path.join(student_dir, f"{direction}.jpg")

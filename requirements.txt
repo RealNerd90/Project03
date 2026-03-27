@@ -9,3 +9,4 @@ matplotlib
 winrt-Windows.Devices.Geolocation
 winrt-Windows.Foundation
 Django>=5.0,<6.0
+python-dotenv

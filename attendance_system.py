@@ -12,6 +12,7 @@ from facenet_pytorch import MTCNN, InceptionResnetV1
 from PIL import Image, ImageDraw, ImageFont
 
 import re
+import urllib.request
 if sys.platform == "win32":
     try:
         from winrt.windows.devices.geolocation import Geolocator, PositionStatus, GeolocationAccessStatus
@@ -57,7 +58,7 @@ def _load_location_config():
                 if "radius_meters" in json_cfg:
                     cfg["radius_meters"] = max(10, float(json_cfg["radius_meters"]))
         except Exception as e:
-            print(f"⚠️  Warning: Could not load location_config.json: {e}. Using code defaults.")
+            print(f"Warning: Could not load location_config.json: {e}. Using code defaults.")
     
     return cfg
 
@@ -83,28 +84,48 @@ def _haversine_meters(lat1, lon1, lat2, lon2):
 async def _get_current_location():
     """
     Get current location using Windows Geolocation API.
-    Returns (lat, lon) or (None, None) on failure.
+    Returns (lat, lon) or (None, None) on failure, with IP fallback.
     """
-    if sys.platform != "win32" or Geolocator is None:
-        return (None, None)
-        return _get_current_location_ip()  # Fallback to IP for non-windows
+    if sys.platform == "win32" and Geolocator is not None:
+        try:
+            access_status = await Geolocator.request_access_async()
+            if access_status == GeolocationAccessStatus.ALLOWED:
+                geolocator = Geolocator()
+                # print("Getting current position via GPS... (may take a moment)")
+                position = await geolocator.get_geoposition_async()
+                lat = position.coordinate.latitude
+                lon = position.coordinate.longitude
+                print(f"  -> GPS Location: Lat={lat:.6f}, Lon={lon:.6f} (Accuracy: {position.coordinate.accuracy:.0f}m)")
+                return (float(lat), float(lon))
+            else:
+                print("Location access denied in Windows settings.")
+        except Exception as e:
+            print(f"Could not get GPS location: {e}")
 
+    # Fallback to IP if GPS fails or not on Windows
+    return await _get_current_location_ip()
+
+async def _get_current_location_ip():
+    """
+    Fallback: Get approximate location via IP address.
+    """
+    print("Getting approximate location via IP...")
     try:
-        access_status = await Geolocator.request_access_async()
-        if access_status != GeolocationAccessStatus.ALLOWED:
-            print("⚠️  Location access denied in Windows settings.")
-            return (None, None)
-
-        geolocator = Geolocator()
-        print("🌍 Getting current position... (may take a moment)")
-        position = await geolocator.get_geoposition_async()
-        lat = position.coordinate.latitude
-        lon = position.coordinate.longitude
-        print(f"  -> GPS Location: Lat={lat:.6f}, Lon={lon:.6f} (Accuracy: {position.coordinate.accuracy:.0f}m)")
-        return (float(lat), float(lon))
+        # Use ip-api.com (free for non-commercial use, ~45 requests/min)
+        # In a real production app, use a more robust or paid service.
+        url = "http://ip-api.com/json/"
+        with urllib.request.urlopen(url, timeout=5) as response:
+            data = json.loads(response.read().decode())
+            if data.get("status") == "success":
+                lat = float(data.get("lat"))
+                lon = float(data.get("lon"))
+                print(f"  -> IP Location: Lat={lat:.6f}, Lon={lon:.6f} ({data.get('city')}, {data.get('country')})")
+                return (lat, lon)
+            else:
+                print(f"IP Geolocation API error: {data.get('message')}")
     except Exception as e:
-        print(f"⚠️  Could not get GPS location: {e}")
-        return (None, None)
+        print(f"Could not get IP-based location: {e}")
+    return (None, None)
 
 async def check_location_allowed():
     """
@@ -123,7 +144,7 @@ async def check_location_allowed():
     return False, f"Outside allowed radius ({dist:.0f} m > {cfg['radius_meters']} m)."
 
 class AttendanceSystem:
-    def __init__(self, database_path='sample_faces', threshold=0.6):
+    def __init__(self, database_path='media', threshold=0.6):
         self.device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
         print(f"Using device: {self.device}")
         
@@ -179,11 +200,11 @@ class AttendanceSystem:
         Load reference faces from the database folder.
 
         New layout (preferred):
-          sample_faces/<student_name>/<angle>.jpg
-          e.g. sample_faces/Alice/left.jpg, right.jpg, up.jpg, down.jpg, front.jpg
+          media/<student_name>/<angle>.jpg
+          e.g. media/Alice/left.jpg, right.jpg, up.jpg, down.jpg, front.jpg
 
         Backward compatible layout (still supported):
-          sample_faces/<student_name>__<tag>.jpg
+          media/<student_name>__<tag>.jpg
         """
         if not os.path.exists(self.database_path):
             os.makedirs(self.database_path)
@@ -1159,8 +1180,8 @@ class AttendanceSystem:
 
 async def async_main():
     # Load the full database root so new registrations create their own folder:
-    #   sample_faces/<StudentName>/{left,right,up,down}.jpg
-    system = AttendanceSystem(database_path="sample_faces")
+    #   media/<StudentName>/{left,right,up,down}.jpg
+    system = AttendanceSystem(database_path="media")
 
     while True:
         print("\n=== Smart Attendance System ===")
@@ -1170,30 +1191,36 @@ async def async_main():
         choice = input("Enter choice: ").strip()
 
         if choice == '1':
-            name = input("Enter Name: ")
-            cam_idx_str = input("Enter Camera Index (default 0): ")
-            cam_idx = int(cam_idx_str) if cam_idx_str.strip() else 0
-            system.register_from_camera(name, cam_idx)
+            name = input("Enter Name: ").strip()
+            if not name:
+                print("❌ Name cannot be empty.")
+                continue
+
+            print("\n--- Registration Method ---")
             print("  a. Enter Image Path")
             print("  b. Capture from Camera")
-            reg_choice = input("  Choose method (a/b): ").lower()
+            reg_choice = input("  Choose method (a/b): ").lower().strip()
+
             if reg_choice == 'a':
-                img_path = input("  Enter Image Path: ").strip('"')
+                img_path = input("  Enter Image Path: ").strip().strip('"')
                 system.register_student(name, img_path)
             elif reg_choice == 'b':
-                cam_idx_str = input("  Enter Camera Index (default 0): ")
-                cam_idx = int(cam_idx_str) if cam_idx_str.strip() else 0
+                cam_idx_str = input("  Enter Camera Index (default 0): ").strip()
+                cam_idx = int(cam_idx_str) if cam_idx_str else 0
                 system.register_from_camera(name, cam_idx)
             else:
                 print("❌ Invalid choice.")
 
         elif choice == '2':
-            cam_idx_str = input("Enter Camera Index (default 0): ")
-            cam_idx = int(cam_idx_str) if cam_idx_str.strip() else 0
+            cam_idx_str = input("Enter Camera Index (default 0): ").strip()
+            cam_idx = int(cam_idx_str) if cam_idx_str else 0
             await system.run_live_mode(cam_idx)
 
         elif choice == '3':
+            print("Exiting...")
             break
+        else:
+            print("❌ Invalid choice. Please enter 1, 2, or 3.")
 
 def main():
     asyncio.run(async_main())

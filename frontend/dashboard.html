@@ -208,8 +208,15 @@
                         <p class="text-sm font-bold">{{ weekly_progress_pct }}%</p>
                     </div>
                     <div class="progress-bar-bg mb-3">
-                        <div class="progress-bar-fill" style="width: {{ weekly_progress_pct }}%;"></div>
+                        <div class="progress-bar-fill" id="weeklyProgressFill"></div>
                     </div>
+                    <script>
+                        (function() {
+                            const pct = '{{ weekly_progress_pct|default:0 }}';
+                            const el = document.getElementById('weeklyProgressFill');
+                            if (el) el.style.width = pct + '%';
+                        })();
+                    </script>
                     <p class="text-xs opacity-80">{{ weekly_remaining_text }}</p>
                 </div>
 

@@ -1,4 +1,4 @@
-# Sample Faces Directory
+# Media Directory
 
 This directory contains the reference face images used as the recognition database.
 
@@ -9,7 +9,7 @@ This directory contains the reference face images used as the recognition databa
 Create **one folder per student** and store multiple angle images inside it:
 
 ```
-sample_faces/
+media/
   Amar/
     left.jpg
     right.jpg
@@ -32,7 +32,7 @@ The app will also accept filenames like `Amar_left.jpg` inside the student folde
 ## Example Structure
 
 ```
-sample_faces/
+media/
 ├── Amar/
 │   ├── left.jpg
 │   ├── right.jpg

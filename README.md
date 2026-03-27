@@ -11,7 +11,7 @@ Project03/
 ├── location_config.json     # Admin: attendance location & radius (auto-created)
 ├── attendance_log.csv        # Output log (auto-created/appended)
 ├── output/                   # Saved annotated results (auto-created)
-└── sample_faces/             # Face database (one folder per student)
+└── media/             # Face database (one folder per student)
     ├── _embeddings_cache.pt  # Embedding cache for fast startup (auto-created)
     ├── <StudentName>/
     │   ├── left.jpg          # Auto-captured angle reference
@@ -28,14 +28,14 @@ Project03/
 - **Face embedding**: `facenet_pytorch.InceptionResnetV1` (pretrained `vggface2`)
 - **Matching**: Euclidean distance between the live embedding and all stored reference embeddings.
 - **Multi-angle references**: Each student can have multiple reference images (angles). The best match across all references is used.
-- **Fast startup**: The app caches computed embeddings to `sample_faces/_embeddings_cache.pt`. On later runs, unchanged images load instantly.
+- **Fast startup**: The app caches computed embeddings to `media/_embeddings_cache.pt`. On later runs, unchanged images load instantly.
 
 ## Face database layout (important)
 
-Create one folder per student inside `sample_faces/`:
+Create one folder per student inside `media/`:
 
 ```
-sample_faces/
+media/
   Amar/
     Amar_left.jpg   (also accepts left.jpg)
     Amar_right.jpg
@@ -76,12 +76,12 @@ When you run `attendance_system.py`, you’ll see a simple menu:
 
 - **1. Register Student**
   - **a. Enter Image Path**
-    - Saves the image into `sample_faces/<Name>/front.jpg`
+    - Saves the image into `media/<Name>/front.jpg`
     - Reloads the database
   - **b. Capture from Camera**
     - Auto-detects face and auto-captures **4 angles**:
       - left / right / up / down
-    - Creates `sample_faces/<Name>/` automatically
+    - Creates `media/<Name>/` automatically
     - No manual “align box” is required; follow on-screen instructions
 
 - **2. Mark Attendance**

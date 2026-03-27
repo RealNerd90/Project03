@@ -24,11 +24,22 @@
 <body class="bg-gray-light">
     <!-- Navbar (simplified for sign in page) -->
     <nav class="navbar navbar-border">
-        <div class="logo">
+        <!-- Desktop Logo -->
+        <div class="logo desktop-only">
             <i class="ph-fill ph-check-square-offset"></i>
             <span>AttendancePro</span>
         </div>
-        <div class="nav-links">
+
+        <!-- Mobile Navbar -->
+        <div class="mobile-navbar mobile-only">
+            <a href="{% url 'welcome' %}" class="nav-back-btn">
+                <i class="ph-bold ph-caret-left"></i>
+            </a>
+            <span class="mobile-nav-title">Sign In</span>
+            <div class="nav-spacer"></div>
+        </div>
+
+        <div class="nav-links desktop-only">
             <a href="{% url 'welcome' %}">Home</a>
             <a href="#">Support</a>
             <a href="#">About</a>
@@ -41,6 +52,10 @@
 
                 <!-- Left Side: Camera Scan -->
                 <div class="signin-left">
+                    <div class="mobile-only mobile-welcome text-center">
+                        <h2 class="welcome-title">Welcome Back</h2>
+                        <p class="welcome-subtitle">Verify your identity to log your attendance for today.</p>
+                    </div>
                     <div class="camera-placeholder">
                         <div class="camera-circle">
                             <!-- Outer circle with light blue border -->
@@ -72,13 +87,13 @@
 
                 <!-- Right Side: Info & Manual Login -->
                 <div class="signin-right">
-                    <h2 class="verification-title">Identity Verification</h2>
+                    <h2 class="verification-title desktop-only">Identity Verification</h2>
 
-                    <div class="instruction-box">
+                    <div class="instruction-box desktop-only">
                         <p><i>"Position your face or ID card within the frame"</i></p>
                     </div>
 
-                    <div class="info-note">
+                    <div class="info-note desktop-only">
                         <i class="ph-fill ph-info info-icon"></i>
                         <p>Ensure you are in a well-lit area for faster face recognition.</p>
                     </div>
@@ -259,7 +274,12 @@
     async function startCamera() {
         try {
             const stream = await navigator.mediaDevices.getUserMedia({
-                video: { facingMode: "user" }
+                video: {
+                    facingMode: "user",
+                    width: { ideal: 640 },
+                    height: { ideal: 480 },
+                    frameRate: { ideal: 60, min: 30 }
+                }
             });
 
             video.srcObject = stream;
@@ -399,7 +419,7 @@
     function startScanLoop() {
         if (scanLoopId) return;
         // Check frequently; gate + cooldown ensure server isn't spammed.
-        scanLoopId = setInterval(captureAndSend, 250);
+        scanLoopId = setInterval(captureAndSend, 150);
         if (scanButton) scanButton.innerHTML = "Scanning...";
     }
 
