@@ -214,6 +214,7 @@ def dashboard(request: HttpRequest) -> HttpResponse:
             "weekly_remaining_text": remaining_text,
             "calendar_cells": calendar_cells,
             "calendar_month_label": calendar_month_label,
+            "already_checked_in_today": today in present_days,
         },
     )
 
@@ -385,18 +386,11 @@ def analytics(request: HttpRequest) -> HttpResponse:
     hours_pct = (total_hours / hours_goal * 100) if hours_goal > 0 else 0
     leaves_pct = (leaves_taken / 5 * 100) if 5 > 0 else 0 # Assuming 5 is a "high" number for visualization
 
-    # --- NEW: Summary Dashboard Calculations ---
-    # 1. Monthly Summary (Last 6 Months)
+    # 1. Monthly Summary (Current Year)
     monthly_summary = []
-    for i in range(6):
-        # Calculate month and year
-        target_month_date = today.replace(day=1) - timedelta(days=1) if today.day == 1 else today.replace(day=1)
-        for _ in range(i):
-            target_month_date = target_month_date.replace(day=1) - timedelta(days=1)
-        
-        m_year = target_month_date.year
-        m_month = target_month_date.month
-        month_name = target_month_date.strftime("%b").upper()
+    m_year = today.year
+    for m_month in range(1, 13):
+        month_name = date(m_year, m_month, 1).strftime("%b").upper()
         
         # Monthly records
         m_records = AttendanceRecord.objects.filter(
@@ -405,13 +399,7 @@ def analytics(request: HttpRequest) -> HttpResponse:
             date__month=m_month
         )
 
-        # Working days in this month
-        m_cal = calendar.monthcalendar(m_year, m_month)
-        m_working_days = 0
-        for week in m_cal:
-            for day_idx in range(5): # Mon-Fri
-                if week[day_idx] != 0:
-                    m_working_days += 1
+        _, m_total_days = calendar.monthrange(m_year, m_month)
         
         # Monthly records - only first check-in of each day for punctuality
         m_day_records = m_records.filter(time__isnull=False).order_by("date", "time")
@@ -422,14 +410,14 @@ def analytics(request: HttpRequest) -> HttpResponse:
         
         m_present_count = len(m_first_checkins)
         m_late_count = sum(1 for t in m_first_checkins.values() if t > ON_TIME_CUTOFF)
-        m_absent_count = max(0, m_working_days - m_present_count)
+        m_absent_count = max(0, m_total_days - m_present_count)
         
         monthly_summary.append({
             "month": month_name,
             "present": m_present_count,
             "absent": m_absent_count,
             "late": m_late_count,
-            "rate": (m_present_count / m_working_days * 100) if m_working_days > 0 else 0
+            "rate": (m_present_count / m_total_days * 100) if m_total_days > 0 else 0
         })
 
     # 2. Time Distribution (Selected Period)
@@ -449,6 +437,17 @@ def analytics(request: HttpRequest) -> HttpResponse:
     early_pct = (early_count / total_arrivals * 100) if total_arrivals > 0 else 0
     ontime_pct = (ontime_count / total_arrivals * 100) if total_arrivals > 0 else 0
     late_pct = (late_count / total_arrivals * 100) if total_arrivals > 0 else 0
+    
+    # Average Check-In Time & Duration
+    if total_arrivals > 0:
+        total_minutes = sum(t.hour * 60 + t.minute for t in period_first_checkins.values())
+        avg_minutes = int(total_minutes / total_arrivals)
+        avg_checkin_str = time_cls(avg_minutes // 60, avg_minutes % 60).strftime("%I:%M %p").lstrip("0")
+    else:
+        avg_checkin_str = "--:--"
+        
+    dur_count = sum(1 for r in records if r.time and r.check_out_time)
+    avg_duration_str = f"{(total_hours / dur_count):.1f}" if dur_count > 0 else "0.0"
     
     # Efficiency is a mix of attendance and punctuality
     efficiency = (attendance_rate * 0.7 + punctuality_score * 0.3) if total_arrivals > 0 else attendance_rate
@@ -504,11 +503,14 @@ def analytics(request: HttpRequest) -> HttpResponse:
             "streak_count": streak_count,
             "attendance_records": records.order_by("-date", "-time")[:50],
             # New Data
+            "current_year": today.year,
             "monthly_summary": monthly_summary,
             "early_pct": round(early_pct),
             "ontime_pct": round(ontime_pct),
             "late_pct": round(late_pct),
             "efficiency": round(efficiency),
+            "avg_checkin_str": avg_checkin_str,
+            "avg_duration_str": avg_duration_str,
             "most_consistent_month": most_consistent["month"] if most_consistent else "N/A",
             "most_consistent_rate": round(most_consistent["rate"]) if most_consistent else 0,
             "longest_streak": max_streak,
@@ -1063,6 +1065,21 @@ def attendance_checkin_scan(request: HttpRequest) -> JsonResponse:
     name = _normalize_display_name(result.get("name"))
     request.session["display_name"] = name
     now = timezone.localtime(timezone.now())
+
+    # Ensure single daily attendance
+    existing_record = AttendanceRecord.objects.filter(
+        name=name, date=now.date(), status=AttendanceRecord.STATUS_PRESENT
+    ).exists()
+    
+    if existing_record:
+        return JsonResponse(
+            {
+                "success": False,
+                "already_checked_in": True,
+                "message": "Attendance Already Recorded"
+            },
+            status=200,
+        )
 
     try:
         allowed, msg = asyncio.run(check_location_allowed())

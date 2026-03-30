@@ -142,9 +142,15 @@
 
                 <!-- Action Buttons Row -->
                 <div class="action-buttons-row">
+                    {% if already_checked_in_today %}
+                    <button type="button" class="btn btn-primary btn-xl flex-1 justify-center gap-2" id="duplicateCheckinBtn">
+                        <i class="ph-bold ph-sign-in"></i> Check In
+                    </button>
+                    {% else %}
                     <a href="{% url 'scanner' %}?action=checkin" class="btn btn-primary btn-xl flex-1 justify-center gap-2">
                         <i class="ph-bold ph-sign-in"></i> Check In
                     </a>
+                    {% endif %}
                     <a href="{% url 'scanner' %}?action=checkout" class="btn btn-outline btn-xl flex-1 justify-center gap-2">
                         <i class="ph-bold ph-sign-out"></i> Check Out
                     </a>
@@ -581,6 +587,105 @@
             window.addEventListener('keydown', (e) => {
                 if (e.key === 'Escape') close();
             });
+        })();
+    </script>
+
+    <!-- Duplicate Attendance Modal -->
+    <style>
+        .duplicate-modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.4);
+            backdrop-filter: blur(4px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+            padding: 24px;
+        }
+        .duplicate-modal-overlay.open { display: flex; }
+        
+        .duplicate-modal-card {
+            background: white;
+            border-radius: 20px;
+            width: 100%;
+            max-width: 360px;
+            padding: 48px 32px 32px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+            animation: modalFadeInUp 0.3s ease-out forwards;
+        }
+
+        .duplicate-modal-icon {
+            width: 72px;
+            height: 72px;
+            border-radius: 50%;
+            background: #fef3c7;
+            color: #d97706;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 36px;
+            margin-bottom: 24px;
+            box-shadow: 0 4px 10px rgba(217, 119, 6, 0.15);
+        }
+
+        .duplicate-modal-title {
+            font-size: 21px;
+            font-weight: 700;
+            color: #0f172a;
+            margin-bottom: 14px;
+        }
+
+        .duplicate-modal-subtitle {
+            font-size: 15px;
+            color: #475569;
+            line-height: 1.6;
+            margin-bottom: 32px;
+            padding: 0;
+        }
+
+        @keyframes modalFadeInUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+
+    <div class="duplicate-modal-overlay" id="dashboardDuplicateModal" aria-hidden="true">
+        <div class="duplicate-modal-card" role="dialog" aria-modal="true" aria-label="Attendance Already Recorded">
+            <div class="duplicate-modal-icon">
+                <i class="ph-fill ph-warning"></i>
+            </div>
+            <h1 class="duplicate-modal-title">Attendance Already Recorded</h1>
+            <p class="duplicate-modal-subtitle">
+                You have already checked in for today. Only one attendance record per day is permitted.
+            </p>
+            <button type="button" class="btn btn-primary w-full" id="dashboardDismissBtn">Dismiss</button>
+        </div>
+    </div>
+
+    <script>
+        (function() {
+            const btn = document.getElementById('duplicateCheckinBtn');
+            const modal = document.getElementById('dashboardDuplicateModal');
+            const dismiss = document.getElementById('dashboardDismissBtn');
+            
+            if (btn && modal && dismiss) {
+                btn.addEventListener('click', () => {
+                    modal.classList.add('open');
+                });
+                
+                dismiss.addEventListener('click', () => {
+                    modal.classList.remove('open');
+                });
+                
+                modal.addEventListener('click', (e) => {
+                    if (e.target === modal) modal.classList.remove('open');
+                });
+            }
         })();
     </script>
 

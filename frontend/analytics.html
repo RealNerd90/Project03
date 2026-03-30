@@ -149,53 +149,148 @@
             align-items: center;
         }
 
-        .chart-wrapper {
+        .stats-column-vertical {
+            display: flex;
+            flex-direction: column;
+            gap: 32px;
+            width: 100%;
+            margin-top: 24px;
+            margin-bottom: 24px;
+            align-items: center;
+        }
+
+        .stat-item-vertical {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .stat-circle-uniform {
             position: relative;
-            width: 220px;
-            height: 220px;
-            margin: 20px 0;
+            width: 140px;
+            height: 140px;
+            border-radius: 50%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
         }
 
-        .chart-center-label {
+        .stat-circle-uniform.shadow-light {
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+            border: 4px solid white;
+        }
+
+        .bg-gradient-blue { background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); }
+        .bg-gradient-cyan { background: linear-gradient(135deg, #06b6d4 0%, #0e7490 100%); }
+        .bg-gradient-orange { background: linear-gradient(135deg, #f59e0b 0%, #b45309 100%); }
+
+        .stat-circle-uniform canvas {
             position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            text-align: center;
+            top: 0; left: 0;
+            width: 100% !important;
+            height: 100% !important;
         }
 
-        .chart-center-label .value {
-            font-size: 28px;
+        .stat-circle-inner-txt {
+            position: relative;
+            z-index: 2;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .stat-circle-inner-txt .v-val {
+            font-size: 26px;
             font-weight: 800;
             color: #1e293b;
-            display: block;
-            line-height: 1;
+            line-height: 1.2;
         }
+        
+        .stat-circle-inner-txt .v-val.text-white { color: #ffffff; text-shadow: 0 2px 8px rgba(0,0,0,0.15); }
+        .stat-circle-inner-txt .v-val small { font-size: 14px; font-weight: 700; margin-left: 2px; opacity: 0.9; }
 
-        .chart-center-label .label {
-            font-size: 10px;
+        .stat-circle-inner-txt .v-lbl {
+            font-size: 11px;
             font-weight: 700;
-            color: #94a3b8;
-            text-transform: uppercase;
+            color: #64748b;
             letter-spacing: 1px;
-            margin-top: 4px;
+            text-transform: uppercase;
+            margin-top: 6px;
+        }
+        .stat-circle-inner-txt .v-lbl.text-white-light { color: rgba(255,255,255,0.85); }
+
+        .stat-outer-lbl {
+            font-size: 12px;
+            font-weight: 700;
+            color: #475569;
+            letter-spacing: 1px;
+            text-transform: uppercase;
         }
 
-        .distribution-legend {
+        /* Distribution Legend Bottom */
+        .distribution-legend-bottom {
             display: flex;
             justify-content: space-between;
+            align-items: center;
             width: 100%;
             margin-top: auto;
             padding-top: 24px;
             border-top: 1px solid #f1f5f9;
         }
 
-        .legend-item { text-align: center; }
-        .legend-label { font-size: 9px; font-weight: 700; color: #94a3b8; text-transform: uppercase; margin-bottom: 4px; }
-        .legend-value { font-size: 14px; font-weight: 700; }
-        .legend-value.early { color: #06b6d4; }
-        .legend-value.ontime { color: #0A7DFF; }
-        .legend-value.late { color: #f59e0b; }
+        .legend-item-v { 
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            flex: 1;
+        }
+
+        .legend-divider {
+            width: 1px;
+            height: 32px;
+            background: #f8fafc;
+        }
+
+        .legend-item-v .l-lbl { 
+            font-size: 10px; 
+            font-weight: 700; 
+            color: #64748b; 
+            text-transform: uppercase; 
+            letter-spacing: 0.5px;
+            margin-bottom: 6px; 
+        }
+
+        .legend-item-v .l-val { 
+            font-size: 20px; 
+            font-weight: 800; 
+        }
+
+        .legend-item-v .l-val.light-blue { color: #0ea5e9; }
+        .legend-item-v .l-val.blue { color: #0A7DFF; }
+        .legend-item-v .l-val.orange { color: #f59e0b; }
+
+        .year-select-dropdown {
+            font-size: 10px;
+            font-weight: 700;
+            color: #94a3b8;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            border: none;
+            background: transparent;
+            cursor: pointer;
+            outline: none;
+            appearance: none;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%2394a3b8%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E");
+            background-repeat: no-repeat;
+            background-position: right 4px center;
+            background-size: 8px auto;
+            padding-right: 16px;
+        }
     </style>
 </head>
 
@@ -309,7 +404,9 @@
                     <div class="monthly-summary-card">
                         <div class="summary-header">
                             <h3>Monthly Status Summary</h3>
-                            <span class="label">Last 6 Months</span>
+                            <select class="year-select-dropdown" name="year">
+                                <option value="{{ current_year }}">{{ current_year }}</option>
+                            </select>
                         </div>
                         <table class="monthly-table">
                             <thead>
@@ -359,31 +456,61 @@
 
                 <!-- Right: Time Distribution -->
                 <div class="distribution-card" 
-                     data-early="{{ early_pct }}" 
-                     data-ontime="{{ ontime_pct }}" 
-                     data-late="{{ late_pct }}">
+                     data-efficiency="{{ efficiency }}">
                     <div class="summary-header w-full">
-                        <h3>Time Distribution</h3>
+                        <h3>Distribution Stats</h3>
                     </div>
-                    <div class="chart-wrapper">
-                        <canvas id="efficiencyChart"></canvas>
-                        <div class="chart-center-label">
-                            <span class="value">{{ efficiency }}%</span>
-                            <span class="label">Efficiency</span>
+                    
+                    <div class="stats-column-vertical">
+                        <!-- Stat 1: Efficiency -->
+                        <div class="stat-item-vertical">
+                            <div class="stat-circle-uniform">
+                                <canvas id="efficiencyChart"></canvas>
+                                <div class="stat-circle-inner-txt">
+                                     <span class="v-val">{{ efficiency }}%</span>
+                                     <span class="v-lbl">EFFICIENCY</span>
+                                </div>
+                            </div>
+                            <div class="stat-outer-lbl">SCORE OVERALL</div>
+                        </div>
+
+                        <!-- Stat 2: Check-in -->
+                        <div class="stat-item-vertical">
+                            <div class="stat-circle-uniform shadow-light bg-gradient-blue">
+                                <div class="stat-circle-inner-txt">
+                                     <span class="v-val text-white">{{ avg_checkin_str|default:"--:--" }}</span>
+                                     <span class="v-lbl text-white-light">CHECK-IN</span>
+                                </div>
+                            </div>
+                            <div class="stat-outer-lbl">AVG ARRIVAL</div>
+                        </div>
+
+                        <!-- Stat 3: Duration -->
+                        <div class="stat-item-vertical">
+                            <div class="stat-circle-uniform shadow-light bg-gradient-cyan">
+                                <div class="stat-circle-inner-txt">
+                                     <span class="v-val text-white">{{ avg_duration_str|default:"0.0" }}<small>h</small></span>
+                                     <span class="v-lbl text-white-light">DURATION</span>
+                                </div>
+                            </div>
+                            <div class="stat-outer-lbl">AVG DAILY HOURS</div>
                         </div>
                     </div>
-                    <div class="distribution-legend">
-                        <div class="legend-item">
-                            <div class="legend-label">Early</div>
-                            <div class="legend-value early">{{ early_pct }}%</div>
+
+                    <div class="distribution-legend-bottom">
+                        <div class="legend-item-v">
+                            <span class="l-lbl">EARLY</span>
+                            <span class="l-val light-blue">{{ early_pct|default:"0" }}%</span>
                         </div>
-                        <div class="legend-item">
-                            <div class="legend-label">On Time</div>
-                            <div class="legend-value ontime">{{ ontime_pct }}%</div>
+                        <div class="legend-divider"></div>
+                        <div class="legend-item-v">
+                            <span class="l-lbl">ON TIME</span>
+                            <span class="l-val blue">{{ ontime_pct|default:"0" }}%</span>
                         </div>
-                        <div class="legend-item">
-                            <div class="legend-label">Late</div>
-                            <div class="legend-value late">{{ late_pct }}%</div>
+                        <div class="legend-divider"></div>
+                        <div class="legend-item-v">
+                            <span class="l-lbl">LATE</span>
+                            <span class="l-val orange">{{ late_pct|default:"0" }}%</span>
                         </div>
                     </div>
                 </div>
@@ -547,18 +674,15 @@
             const card = document.querySelector('.distribution-card');
             if (!card) return;
             
-            const early = parseFloat(card.dataset.early) || 0;
-            const ontime = parseFloat(card.dataset.ontime) || 0;
-            const late = parseFloat(card.dataset.late) || 0;
+            const efficiency = parseFloat(card.dataset.efficiency) || 0;
 
             const ctx = document.getElementById('efficiencyChart').getContext('2d');
             const data = {
-                labels: ['Early', 'On Time', 'Late'],
                 datasets: [{
-                    data: [early, ontime, late],
-                    backgroundColor: ['#06b6d4', '#0A7DFF', '#f59e0b'],
+                    data: [efficiency, 100 - efficiency],
+                    backgroundColor: ['#0A7DFF', '#f1f5f9'],
                     borderWidth: 0,
-                    cutout: '80%',
+                    cutout: '84%',
                     borderRadius: 10
                 }]
             };
@@ -571,7 +695,7 @@
                     maintainAspectRatio: false,
                     plugins: {
                         legend: { display: false },
-                        tooltip: { enabled: true }
+                        tooltip: { enabled: false }
                     }
                 }
             });

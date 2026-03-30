@@ -15,6 +15,12 @@
     <script src="{% static 'theme.js' %}" defer></script>
     <!-- Phosphor Icons -->
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    
+    <!-- MediaPipe Face Mesh dependencies -->
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/control_utils/control_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js" crossorigin="anonymous"></script>
 </head>
 
 <body class="bg-gray-light no-scroll">
@@ -74,8 +80,98 @@
 
         </div>
     </main>
+    
+    <!-- Duplicate Attendance Modal -->
+    <style>
+        .duplicate-modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.4);
+            backdrop-filter: blur(4px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+            padding: 24px;
+        }
+        .duplicate-modal-overlay.open { display: flex; }
+        
+        .duplicate-modal-card {
+            background: white;
+            border-radius: 20px;
+            width: 100%;
+            max-width: 360px;
+            padding: 48px 32px 32px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+            animation: modalFadeInUp 0.3s ease-out forwards;
+        }
+
+        .duplicate-modal-icon {
+            width: 72px;
+            height: 72px;
+            border-radius: 50%;
+            background: #fef3c7;
+            color: #d97706;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 36px;
+            margin-bottom: 24px;
+            box-shadow: 0 4px 10px rgba(217, 119, 6, 0.15);
+        }
+
+        .duplicate-modal-title {
+            font-size: 21px;
+            font-weight: 700;
+            color: #0f172a;
+            margin-bottom: 14px;
+        }
+
+        .duplicate-modal-subtitle {
+            font-size: 15px;
+            color: #475569;
+            line-height: 1.6;
+            margin-bottom: 32px;
+            padding: 0;
+        }
+
+        @keyframes modalFadeInUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+
+    <div class="duplicate-modal-overlay" id="duplicateAttendanceModal" aria-hidden="true">
+        <div class="duplicate-modal-card" role="dialog" aria-modal="true" aria-label="Attendance Already Recorded">
+            <div class="duplicate-modal-icon">
+                <i class="ph-fill ph-warning"></i>
+            </div>
+            <h1 class="duplicate-modal-title">Attendance Already Recorded</h1>
+            <p class="duplicate-modal-subtitle">
+                You have already checked in for today. Only one attendance record per day is permitted.
+            </p>
+            <button type="button" class="btn btn-primary w-full" id="dismissDuplicateBtn">Dismiss</button>
+        </div>
+    </div>
+
     {% include "_footer.html" %}
 
+    <script>
+        const duplicateModal = document.getElementById('duplicateAttendanceModal');
+        const dismissBtn = document.getElementById('dismissDuplicateBtn');
+        if (dismissBtn && duplicateModal) {
+            dismissBtn.addEventListener('click', () => {
+                duplicateModal.classList.remove('open');
+                // Return to dashboard after closing the modal to ensure clean state
+                window.location.href = '{% url "dashboard" %}';
+            });
+        }
+    </script>
+    
     <script>
         const video = document.getElementById('scannerVideo');
         const overlay = document.getElementById('scannerOverlay');
@@ -84,8 +180,136 @@
         const cancelBtn = document.getElementById('scannerCancel');
         const retryBtn = document.getElementById('scannerRetry');
 
-        let scanInterval = null;
-        let scanning = false;
+        let scanLoopId = null;
+        let scanInProgress = false;
+        let lastSendAt = 0;
+        let stableCount = 0;
+        let lastCenter = null;
+        let lastBoxArea = null;
+        let gateOk = false;
+        let gateReason = "Align your face properly";
+        let frameNo = 0;
+        let isCameraActive = false;
+
+        // MediaPipe FaceMesh Setup
+        const faceMesh = new FaceMesh({locateFile: (file) => {
+            return `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`;
+        }});
+        faceMesh.setOptions({
+            maxNumFaces: 1,
+            refineLandmarks: true,
+            minDetectionConfidence: 0.5,
+            minTrackingConfidence: 0.5
+        });
+
+        function clamp(n, min, max) { return Math.max(min, Math.min(max, n)); }
+
+        function applyCoverCropToLandmarks(landmarks) {
+            const iw = video.videoWidth || 1;
+            const ih = video.videoHeight || 1;
+            const a = iw / ih;
+
+            if (!Number.isFinite(a) || a <= 0) return landmarks;
+
+            if (a > 1) {
+                const off = (a - 1) / 2;
+                return landmarks.map((p) => ({ ...p, x: p.x * a - off }));
+            }
+            if (a < 1) {
+                const inv = 1 / a;
+                const off = (inv - 1) / 2;
+                return landmarks.map((p) => ({ ...p, y: p.y * inv - off }));
+            }
+            return landmarks;
+        }
+
+        function computeGate(landmarks) {
+            let minX = 1, minY = 1, maxX = 0, maxY = 0;
+            for (const p of landmarks) {
+                if (p.x < minX) minX = p.x;
+                if (p.y < minY) minY = p.y;
+                if (p.x > maxX) maxX = p.x;
+                if (p.y > maxY) maxY = p.y;
+            }
+            minX = clamp(minX, 0, 1); minY = clamp(minY, 0, 1);
+            maxX = clamp(maxX, 0, 1); maxY = clamp(maxY, 0, 1);
+
+            const w = Math.max(0.0001, (maxX - minX));
+            const h = Math.max(0.0001, (maxY - minY));
+            const area = w * h;
+            const cx = (minX + maxX) / 2;
+            const cy = (minY + maxY) / 2;
+
+            const far = area < 0.06;
+            const near = area > 0.30;
+            const tolX = far ? 0.22 : near ? 0.14 : 0.18;
+            const tolY = far ? 0.24 : near ? 0.16 : 0.20;
+
+            const centered = Math.abs(cx - 0.5) <= tolX && Math.abs(cy - 0.5) <= tolY;
+            const goodSize = area >= 0.025 && area <= 0.55;
+            const inFrame = minX > 0.03 && minY > 0.03 && maxX < 0.97 && maxY < 0.97;
+
+            const centerDelta = lastCenter ? Math.hypot(cx - lastCenter.x, cy - lastCenter.y) : 0;
+            const areaDelta = lastBoxArea != null ? Math.abs(area - lastBoxArea) : 0;
+            const stableNow = centerDelta <= 0.018 && areaDelta <= 0.03;
+
+            lastCenter = { x: cx, y: cy };
+            lastBoxArea = area;
+
+            const ok = centered && goodSize && inFrame;
+            if (ok && stableNow) stableCount += 1;
+            else stableCount = 0;
+
+            let reason = "Hold still…";
+            if (!inFrame) reason = "Keep your whole face in frame";
+            else if (!goodSize) reason = area < 0.025 ? "Move closer to the camera" : "Move a bit away";
+            else if (!centered) reason = "Center your face in the circle";
+            else if (!stableNow) reason = "Hold still…";
+
+            return { ok: ok && stableCount >= 2, reason };
+        }
+
+        faceMesh.onResults((results) => {
+            const ctx = overlay.getContext('2d');
+            ctx.save();
+            
+            frameNo += 1;
+            ctx.clearRect(0, 0, overlay.width, overlay.height);
+            
+            if (results.multiFaceLandmarks) {
+                for (const landmarks of results.multiFaceLandmarks) {
+                    const drawLm = applyCoverCropToLandmarks(landmarks);
+
+                    if (frameNo % 2 === 0) {
+                        drawConnectors(ctx, drawLm, FACEMESH_TESSELATION, {
+                            color: 'rgba(0, 0, 0, 0.85)',
+                            lineWidth: 1
+                        });
+                    }
+
+                    const gate = computeGate(landmarks);
+                    gateOk = gate.ok;
+                    gateReason = gate.reason;
+                    setStatus(gateOk ? (isCheckout ? "Face ready ✔ (Checking Out...)" : "Face ready ✔ (Checking In...)") : gateReason, gateOk ? "success" : "info");
+                }
+            } else {
+                gateOk = false;
+                stableCount = 0;
+                lastCenter = null;
+                lastBoxArea = null;
+                setStatus("Align your face properly", "info");
+            }
+            ctx.restore();
+        });
+
+        async function runMediaPipe() {
+            if (isCameraActive && video.readyState >= 2) {
+                await faceMesh.send({image: video});
+            }
+            if (isCameraActive) {
+                requestAnimationFrame(runMediaPipe);
+            }
+        }
 
         function getCookie(name) {
             const value = `; ${document.cookie}`;
@@ -151,8 +375,16 @@
             ? 'Look at the camera to securely check out.'
             : 'Position your face within the frame for secure biometric verification.';
 
-        async function scanFrame() {
+        async function captureAndSend() {
             if (!video.srcObject) return;
+            if (!gateOk) return;
+
+            const now = Date.now();
+            if (now - lastSendAt < 600) return;
+            lastSendAt = now;
+
+            if (scanInProgress) return;
+            scanInProgress = true;
 
             const canvas = document.createElement('canvas');
             canvas.width = video.videoWidth;
@@ -173,6 +405,18 @@
                 });
 
                 const result = await response.json();
+                
+                // --- NEW LOGIC: Duplicate check-in blocker ---
+                if (result.already_checked_in) {
+                    if (scanLoopId) clearInterval(scanLoopId);
+                    scanLoopId = null;
+                    setStatus('Attendance already recorded.', 'error');
+                    
+                    const modal = document.getElementById('duplicateAttendanceModal');
+                    if (modal) modal.classList.add('open');
+                    return;
+                }
+
                 if (result.success) {
                     setStatus(
                         isCheckout
@@ -180,7 +424,8 @@
                             : `Checked in: ${result.name}. Redirecting...`,
                         'success'
                     );
-                    if (scanInterval) clearInterval(scanInterval);
+                    if (scanLoopId) clearInterval(scanLoopId);
+                    scanLoopId = null;
 
                     setTimeout(() => {
                         const timestamp = result.timestamp ? new Date(result.timestamp) : new Date();
@@ -197,39 +442,31 @@
                     return;
                 }
 
-                if (result.box) {
-                    const [x1, y1, x2, y2] = result.box;
-                    const faceArea = (x2 - x1) * (y2 - y1);
-                    const frameArea = video.videoWidth * video.videoHeight;
-                    const ratio = faceArea / frameArea;
-
-                    if (ratio < 0.06) {
-                        setStatus('Move closer to the camera.', 'error');
-                    } else if (ratio > 0.35) {
-                        setStatus('Move a bit away from the camera.', 'error');
-                    } else {
-                        setStatus('Hold still and look at the camera.', 'info');
-                    }
-                } else {
-                    setStatus('No face detected. Please center your face.', 'error');
+                if (!result.success && result.message) {
+                    setStatus(result.message, 'error');
                 }
             } catch (err) {
                 setStatus('Error communicating with server. Please try again.', 'error');
+            } finally {
+                scanInProgress = false;
             }
         }
 
         function beginScan() {
-            if (scanning) return;
-            scanning = true;
+            if (scanLoopId) return;
+            isCameraActive = true;
             setStatus('Scanning... Please look directly into the camera', 'info');
-            scanInterval = setInterval(scanFrame, 400);
+            scanLoopId = setInterval(captureAndSend, 150);
+            runMediaPipe();
         }
 
         function stopScan() {
-            if (!scanning) return;
-            scanning = false;
-            if (scanInterval) clearInterval(scanInterval);
+            if (!scanLoopId) return;
+            isCameraActive = false;
+            clearInterval(scanLoopId);
+            scanLoopId = null;
             setStatus('Scan paused. Press retry to continue.', 'error');
+            clearOverlay();
         }
 
         cancelBtn.addEventListener('click', () => {
