@@ -1,11 +1,12 @@
-from django.urls import path
+from django.urls import path # type: ignore
 
-from . import views
+from . import views # type: ignore
 
 urlpatterns = [
     path("", views.welcome, name="welcome"),
     path("dashboard/", views.dashboard, name="dashboard"),
     path("admin-dashboard/", views.admin_dashboard, name="admin-dashboard"),
+    path("admin-dashboard/geofencing/", views.admin_geofencing, name="admin-geofencing"),
     path("analytics/", views.analytics, name="analytics"),
     path("profile/", views.profile_view, name="profile"),
     path("profile/edit/", views.profile_edit_view, name="profile-edit"),

@@ -10,59 +10,57 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="{% static 'style.css' %}" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="{% static 'theme.js' %}" defer></script>
   <script src="https://unpkg.com/@phosphor-icons/web"></script>
 </head>
 
 <body class="admin-dashboard">
-  <div class="admin-shell">
-    <aside class="admin-sidebar" aria-label="Admin navigation">
-      <div class="admin-brand">
-        <div class="admin-brand-mark" aria-hidden="true">
-          <i class="ph-fill ph-shield-check"></i>
-        </div>
-        <div class="admin-brand-meta">
-          <div class="admin-brand-title">AttendancePro</div>
-          <div class="admin-brand-subtitle">Admin Dashboard</div>
+  <div class="shell">
+    <aside class="sidebar">
+      <div class="sidebar-brand">
+        <div class="brand-icon"><i class="ph-fill ph-shield-check"></i></div>
+        <div class="brand-text">
+          <strong>Attendance Portal</strong>
+          <span>Admin Dashboard</span>
         </div>
       </div>
 
-      <nav class="admin-nav">
-        <a class="admin-nav-item is-active" href="#" aria-current="page">
-          <span class="admin-nav-icon" aria-hidden="true"><i class="ph-bold ph-squares-four"></i></span>
-          <span class="admin-nav-label">Dashboard</span>
+      <nav class="sidebar-nav">
+        <a href="{% url 'admin-dashboard' %}" class="nav-link active">
+          <i class="ph-bold ph-squares-four"></i>
+          <span>Dashboard</span>
         </a>
-        <a class="admin-nav-item" href="#">
-          <span class="admin-nav-icon" aria-hidden="true"><i class="ph-bold ph-crosshair"></i></span>
-          <span class="admin-nav-label">Geofencing</span>
+        <a href="{% url 'admin-geofencing' %}" class="nav-link">
+          <i class="ph-bold ph-map-trifold"></i>
+          <span>Geofencing</span>
         </a>
-        <a class="admin-nav-item" href="#">
-          <span class="admin-nav-icon" aria-hidden="true"><i class="ph-bold ph-users-three"></i></span>
-          <span class="admin-nav-label">Student Management</span>
+        <a href="#" class="nav-link">
+          <i class="ph-bold ph-users-three"></i>
+          <span>Student Management</span>
         </a>
-        <a class="admin-nav-item" href="#">
-          <span class="admin-nav-icon" aria-hidden="true"><i class="ph-bold ph-gear-six"></i></span>
-          <span class="admin-nav-label">System Settings</span>
+        <a href="#" class="nav-link">
+          <i class="ph-bold ph-gear-six"></i>
+          <span>System Settings</span>
         </a>
       </nav>
 
-      <div class="admin-sidebar-foot">
-        <div class="admin-user">
-          <div class="admin-user-avatar" aria-hidden="true">
-            <i class="ph-bold ph-user"></i>
+      <div class="sidebar-foot">
+        <div class="sidebar-user">
+          <div class="user-avatar"><i class="ph-bold ph-user"></i></div>
+          <div class="user-info">
+            <strong>Alex Morgan</strong>
+            <span>System Admin</span>
           </div>
-          <div class="admin-user-meta">
-            <div class="admin-user-name">Alex Morgan</div>
-            <div class="admin-user-role">System Admin</div>
-          </div>
-          <button type="button" class="admin-user-action" aria-label="Account actions">
+          <a class="user-logout" href="{% url 'logout' %}" style="text-decoration: none;">
             <i class="ph-bold ph-sign-out"></i>
-          </button>
+          </a>
         </div>
       </div>
     </aside>
 
-    <div class="admin-main">
+    <div class="main">
       <main class="admin-content">
         <section class="admin-page-head">
           <div class="admin-page-head-row">
@@ -71,102 +69,326 @@
               <p>Real-time attendance metrics and active system status.</p>
             </div>
 
-            <div class="admin-campus-pill" role="status" aria-label="System status">
-              <div class="admin-campus-name">Campus West</div>
-              <div class="admin-campus-status">
-                <span class="admin-dot" aria-hidden="true"></span>
-                <span>System Online</span>
+            <div class="admin-date-picker-wrap" id="drpContainer">
+              <button type="button" class="admin-date-trigger" id="drpTrigger" aria-expanded="false" aria-haspopup="dialog">
+                <i class="ph-bold ph-calendar-blank"></i>
+                <span id="drpDisplay">Loading...</span>
+                <i class="ph-bold ph-caret-down"></i>
+              </button>
+              
+              <div class="drp-dropdown" id="drpDropdown" role="dialog" aria-modal="true" aria-hidden="true" style="display: none;">
+                <div class="drp-header">
+                  <div class="drp-month-title" id="drpMonthYear">October 2023</div>
+                  <div class="drp-nav">
+                    <button type="button" id="drpPrev" class="drp-nav-btn"><i class="ph-bold ph-caret-left"></i></button>
+                    <button type="button" id="drpNext" class="drp-nav-btn"><i class="ph-bold ph-caret-right"></i></button>
+                  </div>
+                </div>
+                <div class="drp-weekdays">
+                  <span>SU</span><span>MO</span><span>TU</span><span>WE</span><span>TH</span><span>FR</span><span>SA</span>
+                </div>
+                <div class="drp-grid" id="drpGrid"></div>
+                <div class="drp-footer">
+                  <button type="button" class="drp-btn drp-btn--cancel" id="drpCancel">Cancel</button>
+                  <button type="button" class="drp-btn drp-btn--apply" id="drpApply">Apply Date</button>
+                </div>
               </div>
             </div>
           </div>
         </section>
 
+        <script>
+          document.addEventListener('DOMContentLoaded', () => {
+              const qs = new URLSearchParams(window.location.search);
+              let initialStart = qs.get('start_date') || "{{ start_date }}";
+              
+              if (!initialStart) {
+                  const today = new Date();
+                  initialStart = today.toISOString().split('T')[0];
+              }
+              
+              let selectedStart = new Date(initialStart + 'T12:00:00');
+              let tempStart = new Date(selectedStart);
+
+              let currentMonth = selectedStart.getMonth();
+              let currentYear = selectedStart.getFullYear();
+
+              const trigger = document.getElementById('drpTrigger');
+              const display = document.getElementById('drpDisplay');
+              const dropdown = document.getElementById('drpDropdown');
+              const grid = document.getElementById('drpGrid');
+              const monthYearLbl = document.getElementById('drpMonthYear');
+              const prevBtn = document.getElementById('drpPrev');
+              const nextBtn = document.getElementById('drpNext');
+              const applyBtn = document.getElementById('drpApply');
+              const cancelBtn = document.getElementById('drpCancel');
+              const container = document.getElementById('drpContainer');
+
+              const fmtDisplay = (date) => {
+                  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+              };
+              
+              const updateTriggerText = () => {
+                  display.textContent = fmtDisplay(selectedStart);
+              };
+              updateTriggerText();
+
+              const openDropdown = () => {
+                  dropdown.style.display = 'block';
+                  dropdown.setAttribute('aria-hidden', 'false');
+                  trigger.setAttribute('aria-expanded', 'true');
+                  container.classList.add('open');
+                  
+                  // Reset temp selection to applied Date
+                  tempStart = new Date(selectedStart);
+                  currentMonth = tempStart.getMonth();
+                  currentYear = tempStart.getFullYear();
+                  renderCalendar();
+              };
+
+              const closeDropdown = () => {
+                  dropdown.style.display = 'none';
+                  dropdown.setAttribute('aria-hidden', 'true');
+                  trigger.setAttribute('aria-expanded', 'false');
+                  container.classList.remove('open');
+              };
+
+              trigger.addEventListener('click', () => {
+                  if (container.classList.contains('open')) closeDropdown();
+                  else openDropdown();
+              });
+
+              // Prevent clicks inside the dropdown from bubbling to the document
+              dropdown.addEventListener('click', (e) => {
+                  e.stopPropagation();
+              });
+
+              cancelBtn.addEventListener('click', closeDropdown);
+
+              applyBtn.addEventListener('click', (e) => {
+                  e.preventDefault();
+                  if (!tempStart) return;
+
+                  const pad = (n) => String(n).padStart(2, '0');
+                  const s = tempStart;
+                  
+                  const startStr = `${s.getFullYear()}-${pad(s.getMonth()+1)}-${pad(s.getDate())}`;
+                  
+                  // Submit logic for single date: filter the exact day using date__range=[start, start]
+                  window.location.assign(window.location.pathname + `?start_date=${startStr}&end_date=${startStr}`);
+              });
+
+              prevBtn.addEventListener('click', () => {
+                  currentMonth--;
+                  if (currentMonth < 0) {
+                      currentMonth = 11;
+                      currentYear--;
+                  }
+                  renderCalendar();
+              });
+
+              nextBtn.addEventListener('click', () => {
+                  currentMonth++;
+                  if (currentMonth > 11) {
+                      currentMonth = 0;
+                      currentYear++;
+                  }
+                  renderCalendar();
+              });
+
+              const renderCalendar = () => {
+                  const firstDay = new Date(currentYear, currentMonth, 1).getDay();
+                  const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+                  const prevMonthDays = new Date(currentYear, currentMonth, 0).getDate();
+
+                  monthYearLbl.textContent = new Date(currentYear, currentMonth, 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+                  
+                  grid.innerHTML = '';
+                  
+                  // Previous month overflow cells
+                  for (let i = 0; i < firstDay; i++) {
+                      const dayObj = document.createElement('div');
+                      dayObj.className = 'drp-day drp-day--disabled';
+                      dayObj.textContent = prevMonthDays - firstDay + i + 1;
+                      grid.appendChild(dayObj);
+                  }
+
+                  // Current month cells
+                  for (let i = 1; i <= daysInMonth; i++) {
+                      const dayDate = new Date(currentYear, currentMonth, i, 12, 0, 0);
+                      const dayTime = dayDate.getTime();
+                      const ts = tempStart ? tempStart.getTime() : null;
+
+                      const btn = document.createElement('button');
+                      btn.type = 'button';
+                      btn.className = 'drp-day';
+                      btn.textContent = i;
+                      
+                      if (ts === dayTime) {
+                          btn.classList.add('drp-day--selected-single');
+                      }
+
+                      btn.addEventListener('click', (e) => {
+                          e.stopPropagation();
+                          tempStart = dayDate;
+                          renderCalendar();
+                      });
+                      grid.appendChild(btn);
+                  }
+                  
+                  // Fill remaining grid (to keep height stable)
+                  const totalCells = firstDay + daysInMonth;
+                  const targetCells = Math.ceil(totalCells / 7) * 7;
+                  for (let i = 1; i <= targetCells - totalCells; i++) {
+                      const dayObj = document.createElement('div');
+                      dayObj.className = 'drp-day drp-day--disabled';
+                      dayObj.textContent = i;
+                      grid.appendChild(dayObj);
+                  }
+              };
+
+              // Close when clicking outside
+              document.addEventListener('click', (e) => {
+                  if (container.classList.contains('open') && !container.contains(e.target)) {
+                      closeDropdown();
+                  }
+              });
+          });
+        </script>
+
         <section class="admin-kpis" aria-label="Key metrics">
           <article class="admin-card admin-kpi">
             <div class="admin-kpi-top">
               <div class="admin-kpi-icon admin-kpi-icon--blue" aria-hidden="true"><i class="ph-bold ph-users"></i></div>
+              {% if new_today > 0 %}
               <div class="admin-kpi-delta admin-kpi-delta--up">
                 <i class="ph-bold ph-arrow-up-right" aria-hidden="true"></i>
-                <span>+12%</span>
+                <span>+{{ new_today }} new</span>
               </div>
+              {% endif %}
             </div>
             <div class="admin-kpi-label">Total Registered Students</div>
-            <div class="admin-kpi-value">1,284</div>
+            <div class="admin-kpi-value">{{ total_students|default:"0" }}</div>
           </article>
 
           <article class="admin-card admin-kpi">
             <div class="admin-kpi-top">
-              <div class="admin-kpi-icon admin-kpi-icon--green" aria-hidden="true"><i class="ph-bold ph-check-circle"></i></div>
-              <div class="admin-kpi-delta admin-kpi-delta--up">
-                <i class="ph-bold ph-arrow-up-right" aria-hidden="true"></i>
-                <span>+3%</span>
+              <div class="admin-kpi-icon admin-kpi-icon--green" aria-hidden="true"><i
+                  class="ph-bold ph-check-circle"></i></div>
+              <div
+                class="admin-kpi-delta {% if attendance_delta >= 0 %}admin-kpi-delta--up{% else %}admin-kpi-delta--down{% endif %}">
+                <i class="ph-bold {% if attendance_delta >= 0 %}ph-arrow-up-right{% else %}ph-arrow-down-right{% endif %}"
+                  aria-hidden="true"></i>
+                <span>{% if attendance_delta > 0 %}+{% endif %}{{ attendance_delta }}%</span>
               </div>
             </div>
             <div class="admin-kpi-label">Today's Attendance %</div>
-            <div class="admin-kpi-value">92.5%</div>
+            <div class="admin-kpi-value">{{ attendance_pct|default:"0" }}%</div>
           </article>
 
           <article class="admin-card admin-kpi">
             <div class="admin-kpi-top">
-              <div class="admin-kpi-icon admin-kpi-icon--purple" aria-hidden="true"><i class="ph-bold ph-radar"></i></div>
-              <div class="admin-kpi-delta admin-kpi-delta--down">
-                <i class="ph-bold ph-arrow-down-right" aria-hidden="true"></i>
-                <span>-1%</span>
+              <div class="admin-kpi-icon admin-kpi-icon--red" aria-hidden="true"><i class="ph-fill ph-warning"></i>
+              </div>
+              <div
+                class="admin-kpi-delta {% if late_delta >= 0 %}admin-kpi-delta--up{% else %}admin-kpi-delta--down{% endif %}">
+                <i class="ph-bold {% if late_delta >= 0 %}ph-arrow-up-right{% else %}ph-arrow-down-right{% endif %}"
+                  aria-hidden="true"></i>
+                <span>{% if late_delta > 0 %}+{% endif %}{{ late_delta }}% from yesterday</span>
               </div>
             </div>
-            <div class="admin-kpi-label">Active Geofences</div>
-            <div class="admin-kpi-value">14</div>
+            <div class="admin-kpi-label">Late Arrivals</div>
+            <div class="admin-kpi-value">{{ late_arrivals|default:"0" }}</div>
           </article>
         </section>
 
         <section class="admin-two-col" aria-label="Charts and map">
-          <article class="admin-card admin-panel">
-            <div class="admin-panel-head">
+          <!-- User Engagement Overview -->
+          <article class="admin-card admin-panel" aria-label="User Engagement Overview">
+            <div class="admin-panel-head admin-panel-head--row">
               <div>
-                <div class="admin-panel-eyebrow">WEEKLY ATTENDANCE TRENDS</div>
-                <div class="admin-panel-metric">
-                  <span class="admin-panel-big">88%</span>
-                  <span class="admin-panel-sub">Average</span>
-                </div>
+                <div class="admin-panel-eyebrow">ENGAGEMENT METRICS</div>
+                <div class="admin-panel-title" style="margin-top:2px;">User Engagement Overview</div>
               </div>
-              <div class="admin-pill admin-pill--success">+2.4% last 7 days</div>
+              <div class="admin-engage-icon" aria-hidden="true"><i class="ph-fill ph-chart-bar"></i></div>
             </div>
 
-            <div class="admin-chart">
-              <svg viewBox="0 0 640 220" role="img" aria-label="Weekly attendance trend chart">
-                <defs>
-                  <linearGradient id="trendFill" x1="0" x2="0" y1="0" y2="1">
-                    <stop offset="0%" stop-color="#0A7DFF" stop-opacity="0.18" />
-                    <stop offset="100%" stop-color="#0A7DFF" stop-opacity="0" />
-                  </linearGradient>
-                </defs>
-                <path class="admin-chart-grid" d="M 24 40 H 616 M 24 90 H 616 M 24 140 H 616 M 24 190 H 616" />
-                <path class="admin-chart-area" d="M24,160 C90,148 122,120 168,132 C216,146 252,96 300,104 C352,114 396,82 438,96 C484,112 528,78 616,70 L616,200 L24,200 Z" />
-                <path class="admin-chart-line" d="M24,160 C90,148 122,120 168,132 C216,146 252,96 300,104 C352,114 396,82 438,96 C484,112 528,78 616,70" />
-              </svg>
-              <div class="admin-chart-x">
-                <span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span>
+            <div class="admin-engage-grid">
+              <div class="admin-engage-card admin-engage-card--blue">
+                <div class="admin-engage-icon-wrap admin-engage-icon--blue" aria-hidden="true">
+                  <i class="ph-fill ph-wifi-high"></i>
+                </div>
+                <div class="admin-engage-body">
+                  <div class="admin-engage-label">ACTIVE NOW</div>
+                  <div class="admin-engage-value">{{ active_now|default:"0" }}</div>
+                </div>
+              </div>
+
+              <div class="admin-engage-card admin-engage-card--green">
+                <div class="admin-engage-icon-wrap admin-engage-icon--green" aria-hidden="true">
+                  <i class="ph-fill ph-user-plus"></i>
+                </div>
+                <div class="admin-engage-body">
+                  <div class="admin-engage-label">NEW TODAY</div>
+                  <div class="admin-engage-value">+{{ new_today|default:"0" }}</div>
+                </div>
+              </div>
+
+              <div class="admin-engage-card admin-engage-card--purple">
+                <div class="admin-engage-icon-wrap admin-engage-icon--purple" aria-hidden="true">
+                  <i class="ph-fill ph-trend-up"></i>
+                </div>
+                <div class="admin-engage-body">
+                  <div class="admin-engage-label">PEAK ACTIVITY</div>
+                  <div class="admin-engage-value">{{ peak_activity|default:"--" }}</div>
+                </div>
+              </div>
+
+              <div class="admin-engage-card admin-engage-card--orange">
+                <div class="admin-engage-icon-wrap admin-engage-icon--orange" aria-hidden="true">
+                  <i class="ph-fill ph-clock"></i>
+                </div>
+                <div class="admin-engage-body">
+                  <div class="admin-engage-label">AVG. SESSION</div>
+                  <div class="admin-engage-value">{{ avg_session|default:"--" }}</div>
+                </div>
               </div>
             </div>
           </article>
 
           <article class="admin-card admin-panel">
             <div class="admin-panel-head admin-panel-head--row">
-              <div class="admin-panel-title">Live Map Activity</div>
-              <a class="admin-panel-link" href="#">View Map View</a>
+              <div class="admin-map-controls">
+                <button type="button" class="admin-map-btn" id="mapFitBtn" title="Fit All Markers">
+                  <i class="ph ph-corners-out"></i>
+                </button>
+                <button type="button" class="admin-map-btn" id="mapCenterBtn" title="Center on Site">
+                  <i class="ph ph-target"></i>
+                </button>
+                <button type="button" class="admin-map-btn" id="mapMeBtn" title="My Location">
+                  <i class="ph ph-navigation-arrow"></i>
+                </button>
+                <button type="button" class="admin-map-btn" id="mapExpandBtn" title="Expand View">
+                  <i class="ph ph-arrows-out-maximize"></i>
+                </button>
+              </div>
             </div>
 
-            <div class="admin-map">
-              <div class="admin-map-surface" aria-hidden="true">
-                <div class="admin-map-grid"></div>
-                <div class="admin-map-pin"></div>
-                <div class="admin-map-ripple"></div>
-                <div class="admin-map-label">
-                  <div class="admin-map-label-title">
-                    <span class="admin-map-label-dot" aria-hidden="true"></span>
-                    <span>Campus Main Entrance</span>
-                  </div>
-                  <div class="admin-map-label-sub">42 students currently active</div>
+            <div class="admin-map" style="position: relative; overflow: hidden;">
+              <div id="adminMap" style="width: 100%; height: 100%; background: #f8fafc;"></div>
+              <div class="admin-map-overlay-legend"
+                style="position: absolute; bottom: 10px; right: 10px; background: white; padding: 8px; border-radius: 8px; font-size: 10px; z-index: 1000; border: 1px solid rgba(0,0,0,0.1); box-shadow: 0 2px 4px rgba(0,0,0,0.05); color: #0f172a;">
+                <div style="display: flex; align-items: center; gap: 4px; margin-bottom: 2px;">
+                  <span style="display: block; width: 8px; height: 8px; background: #3b82f6; border-radius: 50%;"></span>
+                  <span>Admin Location</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 4px; margin-bottom: 2px;">
+                  <span style="display: block; width: 8px; height: 8px; background: #10b981; border-radius: 50%;"></span>
+                  <span>Present</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 4px;">
+                  <span style="display: block; width: 8px; height: 8px; background: #f59e0b; border-radius: 50%;"></span>
+                  <span>Out of radius</span>
                 </div>
               </div>
             </div>
@@ -187,36 +409,571 @@
           <div class="admin-table">
             <div class="admin-table-row admin-table-row--head">
               <div>STUDENT</div>
-              <div>TIME</div>
+              <div>CHECKIN</div>
+              <div>CHECKOUT</div>
               <div>GEOFENCE</div>
               <div>STATUS</div>
             </div>
 
+            {% for log in recent_logs %}
             <div class="admin-table-row">
               <div class="admin-student">
-                <div class="admin-avatar" aria-hidden="true"></div>
-                <div class="admin-student-name">Jordan Smith</div>
+                <div class="admin-avatar {% if forloop.counter|divisibleby:2 %}admin-avatar--tint{% endif %}"
+                  aria-hidden="true">
+                  {% if forloop.counter|divisibleby:2 %}<i class="ph-bold ph-user"></i>{% endif %}
+                </div>
+                <div class="admin-student-name">{{ log.name }}</div>
               </div>
-              <div class="admin-muted">08:45 AM</div>
-              <div class="admin-muted">Science Wing</div>
-              <div><span class="admin-badge admin-badge--ok">VERIFIED</span></div>
+              <div class="admin-muted">{{ log.time }}</div>
+              <div class="admin-muted">{{ log.check_out_time }}</div>
+              <div class="admin-muted" style="font-family: monospace; font-size: 0.85em;">{{ log.geofence }}</div>
+              <div><span class="admin-badge {{ log.status_class }}">{{ log.status }}</span></div>
             </div>
-
+            {% empty %}
             <div class="admin-table-row">
-              <div class="admin-student">
-                <div class="admin-avatar admin-avatar--tint" aria-hidden="true"><i class="ph-bold ph-user"></i></div>
-                <div class="admin-student-name">Elena Rodriguez</div>
-              </div>
-              <div class="admin-muted">08:42 AM</div>
-              <div class="admin-muted">Main Library</div>
-              <div><span class="admin-badge admin-badge--ok">VERIFIED</span></div>
+              <div colspan="5" style="text-align: center; padding: 20px; color: var(--text-muted);">No attendance
+                records found for today.</div>
             </div>
+            {% endfor %}
           </div>
         </section>
       </main>
       {% include "_footer.html" %}
     </div>
   </div>
-</body>
+
+  <!-- Google Maps Modal -->
+  <style>
+    .map-modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.5);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      z-index: 9999;
+    }
+
+    .map-modal-overlay.open {
+      display: flex;
+    }
+
+    .map-modal {
+      width: min(900px, 96vw);
+      background: white;
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
+    }
+
+    .map-modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 16px;
+      border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+    }
+
+    .map-modal-title {
+      font-weight: 700;
+      color: #0f172a;
+      font-size: 14px;
+    }
+
+    .map-modal-actions {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .map-modal-btn {
+      border: 1px solid rgba(0, 0, 0, 0.12);
+      background: white;
+      padding: 8px 10px;
+      border-radius: 10px;
+      font-size: 12px;
+      cursor: pointer;
+    }
+
+    .map-modal-body {
+      width: 100%;
+      height: min(70vh, 520px);
+    }
+
+    .map-modal-body iframe {
+      width: 100%;
+      height: 100%;
+      border: 0;
+    }
+
+    .map-modal-close-x {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      border: 1px solid rgba(0, 0, 0, 0.12);
+      background: white;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+    }
+
+    /* Dark theme support for modal */
+    html[data-theme="dark"] .map-modal {
+      background: #0f172a;
+    }
+
+    html[data-theme="dark"] .map-modal-title {
+      color: #f8fafc;
+    }
+
+    html[data-theme="dark"] .map-modal-header {
+      border-bottom-color: rgba(255, 255, 255, 0.1);
+    }
+
+    html[data-theme="dark"] .map-modal-btn,
+    html[data-theme="dark"] .map-modal-close-x {
+      background: #1e293b;
+      border-color: rgba(255, 255, 255, 0.1);
+      color: #f8fafc;
+    }
+  </style>
+
+  <div class="map-modal-overlay" id="mapModal" aria-hidden="true">
+    <div class="map-modal" role="dialog" aria-modal="true" aria-label="Location map">
+      <div class="map-modal-header">
+        <div class="map-modal-title">Detailed Activity Map</div>
+        <div class="map-modal-actions">
+          <button type="button" class="map-modal-close-x" id="mapModalClose" aria-label="Close map">
+            <i class="ph-bold ph-x"></i>
+          </button>
+        </div>
+      </div>
+      <div class="map-modal-body" style="position: relative;">
+        <div id="modalMap" style="width: 100%; height: 100%;"></div>
+        <div class="admin-map-overlay-legend"
+          style="position: absolute; bottom: 20px; right: 20px; background: white; padding: 10px; border-radius: 10px; font-size: 11px; z-index: 1000; border: 1px solid rgba(0,0,0,0.1); box-shadow: 0 4px 12px rgba(0,0,0,0.1); color: #0f172a;">
+          <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 4px;">
+            <span style="display: block; width: 10px; height: 10px; background: #3b82f6; border-radius: 50%;"></span>
+            <span>Admin Location</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 4px;">
+            <span style="display: block; width: 10px; height: 10px; background: #10b981; border-radius: 50%;"></span>
+            <span>Present</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 6px;">
+            <span style="display: block; width: 10px; height: 10px; background: #f59e0b; border-radius: 50%;"></span>
+            <span>Out of radius</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --blue: #1d6ff3;
+      --blue-light: #e8f0fe;
+      --text: #111827;
+      --text-sub: #6b7280;
+      --border: #e5e7eb;
+      --bg: #f9fafb;
+      --white: #ffffff;
+      --sidebar-w: 280px;
+    }
+
+    html, body {
+      height: 100%;
+      font-family: 'Inter', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    .shell {
+      display: flex;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    .sidebar {
+      width: var(--sidebar-w);
+      background: var(--white);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+      height: 100vh;
+      overflow-y: auto;
+      text-align: left;
+      line-height: normal;
+    }
+
+    .sidebar-brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 24px 22px 20px;
+    }
+
+    .brand-icon {
+      width: 42px;
+      height: 42px;
+      background: var(--blue-light);
+      color: var(--blue);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      flex-shrink: 0;
+    }
+
+    .brand-text strong {
+      display: block;
+      font-size: 16px;
+      font-weight: 800;
+      color: var(--text);
+      line-height: 1.2;
+    }
+
+    .brand-text span {
+      font-size: 13px;
+      color: var(--text-sub);
+      font-weight: 500;
+    }
+
+    .sidebar-nav {
+      flex: 1;
+      padding: 14px 14px !important;
+      display: flex !important;
+      flex-direction: column !important;
+      gap: 4px !important;
+      margin: 0 !important;
+    }
+
+    .nav-link {
+      display: flex !important;
+      align-items: center !important;
+      gap: 14px !important;
+      padding: 14px 18px !important;
+      border-radius: 10px !important;
+      text-decoration: none !important;
+      color: var(--text-sub);
+      font-weight: 600 !important;
+      font-size: 16px !important;
+      transition: background 0.15s, color 0.15s;
+      margin: 0 !important;
+      border: none !important;
+      background-color: transparent;
+    }
+
+    .nav-link i { 
+      font-size: 22px; 
+      flex-shrink: 0; 
+      width: 24px; 
+      display: inline-flex; 
+      justify-content: center; 
+      align-items: center; 
+    }
+
+    .nav-link:hover {
+      background: var(--bg) !important;
+      color: var(--text) !important;
+      border: none !important;
+    }
+
+    .nav-link.active {
+      background: var(--blue) !important;
+      color: #fff !important;
+      box-shadow: 0 6px 18px rgba(29,111,243,0.22) !important;
+      border: none !important;
+      border-bottom: none !important;
+      border-top: none !important;
+      outline: none !important;
+    }
+
+    .nav-link::before,
+    .nav-link::after {
+      display: none !important;
+    }
+
+    .sidebar-foot {
+      padding: 16px 14px 20px;
+      border-top: 1px solid var(--border);
+    }
+
+    .sidebar-user {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 14px;
+      border-radius: 12px;
+      background: var(--bg);
+    }
+
+    .user-avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: var(--blue-light);
+      color: var(--blue);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      flex-shrink: 0;
+    }
+
+    .user-info { flex: 1; min-width: 0; }
+    .user-info strong { display: block; font-size: 14px; font-weight: 700; color: var(--text); }
+    .user-info span   { font-size: 12px; color: var(--text-sub); }
+
+    .user-logout {
+      background: none;
+      border: none;
+      color: var(--text-sub);
+      cursor: pointer;
+      font-size: 20px;
+      display: flex;
+      align-items: center;
+    }
+
+    .main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .admin-content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 36px 40px 56px;
+    }
+
+    .admin-map-controls {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+    }
+
+    .admin-map-btn {
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
+      border: 1px solid rgba(0, 0, 0, 0.08);
+      background: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      color: #64748b;
+      font-size: 16px;
+      transition: all 0.2s;
+    }
+
+    .admin-map-btn:hover {
+      background: #f8fafc;
+      color: #3b82f6;
+      border-color: #3b82f6;
+      box-shadow: 0 2px 4px rgba(59, 130, 246, 0.1);
+    }
+
+    .admin-map-btn i {
+      line-height: 1;
+    }
+
+    html[data-theme="dark"] .admin-map-btn {
+      background: #1e293b;
+      border-color: rgba(255, 255, 255, 0.1);
+      color: #94a3b8;
+    }
+
+    html[data-theme="dark"] .admin-map-btn:hover {
+      background: #334155;
+      color: #60a5fa;
+      border-color: #60a5fa;
+    }
+
+    /* Fix for calendar overlap */
+    .admin-date-picker-wrap {
+      position: relative;
+      z-index: 1100;
+    }
+    .drp-dropdown {
+      z-index: 2000 !important;
+    }
+  </style>
+
+  <script>
+    (function () {
+      const markersData = {{ map_markers|safe|default:"[]" }};
+      const centerCoords = [{{ geofence_setting.latitude|default:"26.1180" }}, {{ geofence_setting.longitude|default:"91.8136" }}];
+      const geofenceRadius = {{ geofence_setting.radius|default:"500" }};
+      let adminMarker = null;
+      let adminMarkerModal = null;
+
+      // Initialize Main Map
+      const mainMap = L.map('adminMap', {
+        zoomControl: false,
+        attributionControl: false
+      }).setView(centerCoords, 14);
+
+      // Add Geofence Circle
+      const geofenceCircle = L.circle(centerCoords, {
+        color: '#0b69ff',
+        fillColor: '#0b69ff',
+        fillOpacity: 0.1,
+        radius: geofenceRadius,
+        weight: 1
+      }).addTo(mainMap);
+
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/light_all/{z}/{x}/{y}.png', {
+        maxZoom: 19
+      }).addTo(mainMap);
+
+      const markerLayer = L.featureGroup().addTo(mainMap);
+
+      function renderMarkers(mapObj, layerObj) {
+        layerObj.clearLayers();
+        markersData.forEach(m => {
+          L.circleMarker([m.lat, m.lon], {
+            radius: 8,
+            fillColor: m.color,
+            color: '#fff',
+            weight: 2,
+            opacity: 1,
+            fillOpacity: 0.9
+          }).addTo(layerObj)
+            .bindPopup(`<strong>${m.name}</strong><br>Status: ${m.status}`);
+        });
+      }
+
+      renderMarkers(mainMap, markerLayer);
+
+      // Handle Map Click for Modal
+      const mapContainer = document.getElementById('adminMap');
+      const expandBtn = document.getElementById('mapExpandBtn');
+      let modalMap = null;
+
+      function openModal() {
+        const modal = document.getElementById('mapModal');
+        if (!modal) return;
+        modal.classList.add('open');
+
+        if (!modalMap) {
+          modalMap = L.map('modalMap').setView(mainMap.getCenter(), mainMap.getZoom());
+          L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/light_all/{z}/{x}/{y}.png').addTo(modalMap);
+          renderMarkers(modalMap, L.layerGroup().addTo(modalMap));
+        } else {
+          modalMap.setView(mainMap.getCenter(), mainMap.getZoom());
+          modalMap.invalidateSize();
+        }
+      }
+
+      if (mapContainer) {
+        mapContainer.style.cursor = 'pointer';
+        mapContainer.addEventListener('click', openModal);
+      }
+      if (expandBtn) {
+        expandBtn.addEventListener('click', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          openModal();
+        });
+      }
+
+      // Map Controls Logic
+      document.getElementById('mapFitBtn')?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (markerLayer.getLayers().length > 0) {
+          mainMap.fitBounds(markerLayer.getBounds(), { padding: [20, 20] });
+        }
+      });
+
+      document.getElementById('mapCenterBtn')?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        mainMap.setView(centerCoords, 15);
+      });
+
+      
+      document.getElementById('mapMeBtn')?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (adminMarker) {
+          mainMap.setView(adminMarker.getLatLng(), 16);
+        }
+      });
+
+      // Modal close logic
+      const modal = document.getElementById('mapModal');
+      const closeBtn = document.getElementById('mapModalClose');
+      if (modal && closeBtn) {
+        function close() { modal.classList.remove('open'); }
+        closeBtn.addEventListener('click', close);
+        modal.addEventListener('click', (e) => { if (e.target === modal) close(); });
+        window.addEventListener('keydown', (e) => { if (e.key === 'Escape') close(); });
+      }
+
+      // Sync Admin's own location if available
+      function createAdminMarker(lat, lon, mapObj) {
+        return L.circleMarker([lat, lon], {
+          radius: 6,
+          fillColor: '#3b82f6',
+          color: '#fff',
+          weight: 2,
+          opacity: 1,
+          fillOpacity: 1
+        }).addTo(mapObj).bindPopup('Your Current Location (Admin)');
+      }
+
+      if (navigator.geolocation) {
+        navigator.geolocation.watchPosition((pos) => {
+          const lat = pos.coords.latitude;
+          const lon = pos.coords.longitude;
+          
+          // Update main map marker
+          if (!adminMarker) {
+            adminMarker = createAdminMarker(lat, lon, mainMap);
+          } else {
+            adminMarker.setLatLng([lat, lon]);
+          }
+
+          // Update modal map marker if modal is active
+          if (modalMap) {
+            if (!adminMarkerModal) {
+              adminMarkerModal = createAdminMarker(lat, lon, modalMap);
+            } else {
+              adminMarkerModal.setLatLng([lat, lon]);
+            }
+          }
+        }, null, { enableHighAccuracy: true });
+      }
+    })();
+
+    // --- Map scroll isolation ---
+    // When hovering over either map, prevent wheel from scrolling the page
+    (function () {
+      const mapIds = ['adminMap', 'modalMap'];
+      mapIds.forEach(function (id) {
+        const el = document.getElementById(id);
+        if (!el) return;
+
+        el.addEventListener('wheel', function (e) {
+          e.stopPropagation();
+        }, { passive: false });
+
+        el.addEventListener('mouseenter', function () {
+          document.body.style.overflowY = 'hidden';
+        });
+
+        el.addEventListener('mouseleave', function () {
+          document.body.style.overflowY = '';
+        });
+      });
+    })();
+  </script>
 
 </html>

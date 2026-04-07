@@ -1,8 +1,8 @@
 {
-    "venvPath": ".",
+    "venvPath": "c:\\Users\\Hp\\Documents\\Project03",
     "venv": "venv",
     "extraPaths": [
-        "./venv/Lib/site-packages"
+        "c:\\Users\\Hp\\Documents\\Project03\\venv\\Lib\\site-packages"
     ],
     "exclude": [
         "**/node_modules",

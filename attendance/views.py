@@ -220,10 +220,190 @@ def dashboard(request: HttpRequest) -> HttpResponse:
 
 
 def admin_dashboard(request: HttpRequest) -> HttpResponse:
-    """Admin dashboard UI (static template in frontend/)."""
+    """Admin dashboard UI with live system metrics."""
     if not request.session.get("is_admin"):
         return redirect("manual-login")
-    return render(request, "admin_dashboard.html")
+
+    # Read date range from query params, fallback to today
+    start_date_str = request.GET.get("start_date")
+    end_date_str = request.GET.get("end_date")
+    
+    today = timezone.localdate()
+    try:
+        from datetime import datetime
+        start_date = datetime.strptime(start_date_str, "%Y-%m-%d").date() if start_date_str else today
+        end_date = datetime.strptime(end_date_str, "%Y-%m-%d").date() if end_date_str else today
+    except ValueError:
+        start_date = today
+        end_date = today
+
+    if start_date > end_date:
+        start_date, end_date = end_date, start_date
+
+    delta_days = (end_date - start_date).days + 1
+    
+    # Previous period for delta calculations
+    prev_end = start_date - timedelta(days=1)
+    prev_start = start_date - timedelta(days=delta_days)
+
+    now = timezone.localtime(timezone.now())
+    total_students = RegisteredUser.objects.count()
+
+    # Selected date range's attendance percentage
+    active_days_qs = AttendanceRecord.objects.filter(
+        date__range=[start_date, end_date]
+    ).values("date").distinct()
+    active_days_count = active_days_qs.count() or 1 # avoid div zero
+    
+    present_range_count = AttendanceRecord.objects.filter(
+        date__range=[start_date, end_date], status=AttendanceRecord.STATUS_PRESENT
+    ).count()
+    
+    # average daily attendance % = (total present in range / (total_students * active_days)) * 100
+    attendance_pct = (present_range_count / (total_students * active_days_count) * 100) if total_students > 0 else 0
+
+    # Late arrivals (cutoff: 9:00 AM)
+    late_cutoff = time_cls(9, 0)
+    late_arrivals_count = AttendanceRecord.objects.filter(
+        date__range=[start_date, end_date], time__gt=late_cutoff
+    ).count()
+
+    # Delta calculations (vs previous period)
+    prev_active_days_qs = AttendanceRecord.objects.filter(
+        date__range=[prev_start, prev_end]
+    ).values("date").distinct()
+    prev_active_days_count = prev_active_days_qs.count() or 1
+
+    prev_present_count = AttendanceRecord.objects.filter(
+        date__range=[prev_start, prev_end], status=AttendanceRecord.STATUS_PRESENT
+    ).count()
+    prev_attendance_pct = (prev_present_count / (total_students * prev_active_days_count) * 100) if total_students > 0 else 0
+    
+    attendance_delta = attendance_pct - prev_attendance_pct
+
+    prev_late_count = AttendanceRecord.objects.filter(
+        date__range=[prev_start, prev_end], time__gt=late_cutoff
+    ).count()
+
+    late_delta_pct = 0
+    if prev_late_count > 0:
+        late_delta_pct = ((late_arrivals_count - prev_late_count) / prev_late_count) * 100
+    elif late_arrivals_count > 0:
+        late_delta_pct = 100
+
+    # ── Engagement Metrics ──────────────────────────────────────────────────
+    # Active Now: incomplete sessions in the range
+    active_now_count = AttendanceRecord.objects.filter(
+        date__range=[start_date, end_date], status=AttendanceRecord.STATUS_PRESENT, check_out_time__isnull=True
+    ).count()
+
+    # New Today: students registered in the selected range
+    new_today_count = RegisteredUser.objects.filter(created_at__date__range=[start_date, end_date]).count()
+
+    # Peak Activity: hour with most check-ins in selected range
+    range_records_with_time = list(AttendanceRecord.objects.filter(date__range=[start_date, end_date], time__isnull=False))
+    if range_records_with_time:
+        from collections import Counter
+        hour_counter: Counter = Counter(r.time.hour for r in range_records_with_time)
+        peak_hour = hour_counter.most_common(1)[0][0]
+        peak_time_str = f"{peak_hour % 12 or 12}:00 {'AM' if peak_hour < 12 else 'PM'}"
+    else:
+        peak_time_str = "--"
+
+    # Avg. Session: mean duration for sessions in range
+    total_dur_secs = 0
+    completed_sessions = 0
+    for r in AttendanceRecord.objects.filter(date__range=[start_date, end_date], time__isnull=False, check_out_time__isnull=False):
+        start_dt = datetime.combine(r.date, r.time)
+        end_dt = datetime.combine(r.date, r.check_out_time)
+        diff = (end_dt - start_dt).total_seconds()
+        if diff > 0:
+            total_dur_secs += diff
+            completed_sessions += 1
+    if completed_sessions > 0:
+        avg_secs = int(total_dur_secs / completed_sessions)
+        avg_session_str = f"{avg_secs // 60}m {avg_secs % 60}s"
+    else:
+        avg_session_str = "--"
+
+    # Recent Logs (latest 5 records across all users in selected range)
+    recent_records = AttendanceRecord.objects.filter(date__range=[start_date, end_date]).order_by("-date", "-time", "-created_at")[:5]
+    logs = []
+    for r in recent_records:
+        logs.append({
+            "name": r.name,
+            "time": r.time.strftime("%I:%M %p").lstrip("0") if r.time else "--:--",
+            "check_out_time": r.check_out_time.strftime("%I:%M %p").lstrip("0") if r.check_out_time else "--:--",
+            "geofence": f"{r.latitude}, {r.longitude}" if r.latitude and r.longitude else (r.geofence or "Main Entrance"),
+            "status": r.get_status_display().upper(),
+            "status_class": "admin-badge--ok" if r.status == AttendanceRecord.STATUS_PRESENT else "admin-badge--warn",
+        })
+
+    # Map Markers (All records for today with coordinates)
+    marker_records = AttendanceRecord.objects.filter(date__range=[start_date, end_date]).exclude(latitude__isnull=True).exclude(longitude__isnull=True)
+    map_markers = []
+    for r in marker_records:
+        map_markers.append({
+            "name": r.name,
+            "lat": r.latitude,
+            "lon": r.longitude,
+            "status": r.get_status_display(),
+            "color": "#10b981" if r.status == AttendanceRecord.STATUS_PRESENT else "#f59e0b",
+        })
+
+    # Geofence Setting for Map Center
+    from .models import GeofenceSetting
+    geofence_setting = GeofenceSetting.objects.first()
+    if not geofence_setting:
+        geofence_setting = GeofenceSetting.objects.create()
+
+    context = {
+        "start_date": start_date.strftime("%Y-%m-%d"),
+        "end_date": end_date.strftime("%Y-%m-%d"),
+        "map_markers": map_markers,
+        "total_students": total_students,
+        "attendance_pct": round(attendance_pct, 1),
+        "attendance_delta": round(attendance_delta, 1),
+        "late_arrivals": late_arrivals_count,
+        "late_delta": round(late_delta_pct, 1),
+        "active_now": active_now_count,
+        "new_today": new_today_count,
+        "peak_activity": peak_time_str,
+        "avg_session": avg_session_str,
+        "recent_logs": logs,
+        "geofence_setting": geofence_setting,
+        "active_page": "dashboard",
+    }
+
+    return render(request, "admin_dashboard.html", context)
+
+
+def admin_geofencing(request: HttpRequest) -> HttpResponse:
+    """Manage geofence settings (location center and radius)."""
+    # In a real app, add @admin_required or similar check here
+    from .models import GeofenceSetting
+    
+    setting = GeofenceSetting.objects.first()
+    if not setting:
+        setting = GeofenceSetting.objects.create() # Create default if missing
+
+    if request.method == "POST":
+        try:
+            setting.latitude = float(request.POST.get("latitude", setting.latitude))
+            setting.longitude = float(request.POST.get("longitude", setting.longitude))
+            setting.radius = float(request.POST.get("radius", setting.radius))
+            setting.verification_method = request.POST.get("verification_method", setting.verification_method)
+            setting.save()
+            messages.success(request, "Geofence settings updated successfully.")
+            return redirect("admin-geofencing")
+        except Exception as e:
+            messages.error(request, f"Error updating settings: {e}")
+
+    context = {
+        "setting": setting,
+        "active_page": "geofencing",
+    }
+    return render(request, "admin_geofencing.html", context)
 
 
 def analytics(request: HttpRequest) -> HttpResponse:
@@ -1082,7 +1262,7 @@ def attendance_checkin_scan(request: HttpRequest) -> JsonResponse:
         )
 
     try:
-        allowed, msg = asyncio.run(check_location_allowed())
+        allowed, msg, lat, lon = asyncio.run(check_location_allowed())
     except Exception as exc:
         return JsonResponse({"success": False, "message": f"Location check failed: {exc}"}, status=500)
 
@@ -1100,6 +1280,9 @@ def attendance_checkin_scan(request: HttpRequest) -> JsonResponse:
         date=now.date(),
         time=time_value,
         status=status,
+        geofence="Main Entrance", # default assigned
+        latitude=lat,
+        longitude=lon,
     )
 
     return JsonResponse(
@@ -1141,7 +1324,7 @@ def attendance_checkout_scan(request: HttpRequest) -> JsonResponse:
     now = timezone.localtime(timezone.now())
 
     try:
-        allowed, msg = asyncio.run(check_location_allowed())
+        allowed, msg, lat, lon = asyncio.run(check_location_allowed())
     except Exception as exc:
         return JsonResponse({"success": False, "message": f"Location check failed: {exc}"}, status=500)
 
@@ -1168,10 +1351,12 @@ def attendance_checkout_scan(request: HttpRequest) -> JsonResponse:
 
     if record:
         record.check_out_time = checkout_time
+        record.latitude = lat
+        record.longitude = lon
         # If location fails at checkout, reflect it on the record as well.
         if status == AttendanceRecord.STATUS_OUT_OF_RADIUS:
             record.status = status
-        record.save(update_fields=["check_out_time", "status"])
+        record.save()
     else:
         record = AttendanceRecord.objects.create(
             name=name,
@@ -1179,6 +1364,7 @@ def attendance_checkout_scan(request: HttpRequest) -> JsonResponse:
             time=None,
             status=status,
             check_out_time=checkout_time,
+            geofence="Main Entrance",
         )
 
     return JsonResponse(
@@ -1346,6 +1532,7 @@ def create_attendance_record(request: HttpRequest) -> JsonResponse:
             date=parsed_date,
             time=parsed_time,
             status=status,
+            geofence=payload.get("geofence", "Main Entrance"),
         )
 
         return JsonResponse(

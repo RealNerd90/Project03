@@ -41,6 +41,9 @@ class AttendanceRecord(models.Model):
         default=STATUS_PRESENT,
     )
     check_out_time = models.TimeField(null=True, blank=True)
+    geofence = models.CharField(max_length=255, blank=True, default="Main Entrance")
+    latitude = models.FloatField(null=True, blank=True)
+    longitude = models.FloatField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -68,4 +71,22 @@ class AdminAccount(models.Model):
         if not self.password_hash:
             return False
         return check_password(raw_password, self.password_hash)
+
+
+class GeofenceSetting(models.Model):
+    """Configuration for the site's geofence center and radius."""
+
+    name = models.CharField(max_length=255, default="Main Site")
+    latitude = models.FloatField(default=26.1180)  # Default to Guwahati
+    longitude = models.FloatField(default=91.8136)
+    radius = models.FloatField(default=500.0)
+    verification_method = models.CharField(max_length=64, default="GPS Only")
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Geofence Setting"
+        verbose_name_plural = "Geofence Settings"
+
+    def __str__(self) -> str:
+        return f"{self.name} ({self.latitude}, {self.longitude}) - {self.radius}m"
 

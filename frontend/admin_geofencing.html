@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="en">
+{% load static %}
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Geofencing Settings - Admin Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --blue: #1d6ff3;
+      --blue-light: #e8f0fe;
+      --text: #111827;
+      --text-sub: #6b7280;
+      --border: #e5e7eb;
+      --bg: #f9fafb;
+      --white: #ffffff;
+      --sidebar-w: 280px;
+      --topbar-h: 72px;
+    }
+
+    html, body {
+      height: 100%;
+      font-family: 'Inter', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    /* ── Shell ──────────────────────────────────────── */
+    .shell {
+      display: flex;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    /* ── Sidebar ────────────────────────────────────── */
+    .sidebar {
+      width: var(--sidebar-w);
+      background: var(--white);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+      height: 100vh;
+      overflow-y: auto;
+    }
+
+    .sidebar-brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 24px 22px 20px;
+    }
+
+    .brand-icon {
+      width: 42px;
+      height: 42px;
+      background: var(--blue-light);
+      color: var(--blue);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      flex-shrink: 0;
+    }
+
+    .brand-text strong {
+      display: block;
+      font-size: 16px;
+      font-weight: 800;
+      color: var(--text);
+      line-height: 1.2;
+    }
+
+    .brand-text span {
+      font-size: 13px;
+      color: var(--text-sub);
+      font-weight: 500;
+    }
+
+    .sidebar-nav {
+      flex: 1;
+      padding: 14px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .nav-link {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 14px 18px;
+      border-radius: 10px;
+      text-decoration: none;
+      color: var(--text-sub);
+      font-weight: 600;
+      font-size: 16px;
+      transition: background 0.15s, color 0.15s;
+    }
+
+    .nav-link i { 
+      font-size: 22px; 
+      flex-shrink: 0; 
+      width: 24px; 
+      display: inline-flex; 
+      justify-content: center; 
+      align-items: center; 
+    }
+
+    .nav-link:hover {
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    .nav-link.active {
+      background: var(--blue);
+      color: #fff;
+      box-shadow: 0 6px 18px rgba(29,111,243,0.22);
+    }
+
+    .sidebar-foot {
+      padding: 16px 14px 20px;
+      border-top: 1px solid var(--border);
+    }
+
+    .sidebar-user {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 14px;
+      border-radius: 12px;
+      background: var(--bg);
+    }
+
+    .user-avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: var(--blue-light);
+      color: var(--blue);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      flex-shrink: 0;
+    }
+
+    .user-info { flex: 1; min-width: 0; }
+    .user-info strong { display: block; font-size: 14px; font-weight: 700; color: var(--text); }
+    .user-info span   { font-size: 12px; color: var(--text-sub); }
+
+    .user-logout {
+      background: none;
+      border: none;
+      color: var(--text-sub);
+      cursor: pointer;
+      font-size: 20px;
+      display: flex;
+      align-items: center;
+    }
+
+    /* ── Main ───────────────────────────────────────── */
+    .main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* ── Topbar ─────────────────────────────────────── */
+    .topbar {
+      height: var(--topbar-h);
+      background: var(--white);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 36px;
+      flex-shrink: 0;
+    }
+
+    .topbar-title {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .topbar-title i { color: var(--blue); font-size: 24px; }
+
+    .topbar-actions {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .topbar-btn {
+      width: 44px;
+      height: 44px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: var(--white);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-sub);
+      cursor: pointer;
+      font-size: 22px;
+      position: relative;
+    }
+
+    .notif-dot {
+      position: absolute;
+      top: 9px;
+      right: 9px;
+      width: 8px;
+      height: 8px;
+      background: #ef4444;
+      border-radius: 50%;
+      border: 2px solid white;
+    }
+
+    .user-circle {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      border: 1px solid var(--border);
+      background: var(--bg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-sub);
+      font-size: 22px;
+    }
+
+    /* ── Page content ───────────────────────────────── */
+    .page-content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 40px 44px 56px;
+    }
+
+    .page-head {
+      margin-bottom: 32px;
+    }
+
+    .page-head h1 {
+      font-size: 34px;
+      font-weight: 800;
+      color: var(--text);
+      letter-spacing: -0.6px;
+      line-height: 1.15;
+      margin-bottom: 10px;
+    }
+
+    .page-head p {
+      font-size: 16px;
+      color: var(--text-sub);
+      font-weight: 400;
+      max-width: 720px;
+      line-height: 1.6;
+    }
+
+    /* ── Map card ───────────────────────────────────── */
+    .map-card {
+      background: var(--white);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      overflow: hidden;
+      margin-bottom: 28px;
+    }
+
+    #geofencingMap {
+      width: 100%;
+      height: 440px;
+      touch-action: none;
+    }
+
+    /* ── Form card ──────────────────────────────────── */
+    .form-card {
+      background: var(--white);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 36px 40px;
+    }
+
+    .form-card-title {
+      font-size: 24px;
+      font-weight: 800;
+      color: var(--text);
+      letter-spacing: -0.4px;
+      margin-bottom: 8px;
+    }
+
+    .form-card-sub {
+      font-size: 15px;
+      color: var(--text-sub);
+      margin-bottom: 32px;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 22px 32px;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .form-group label {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .input-wrap {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    .input-wrap i.icon-left {
+      position: absolute;
+      left: 16px;
+      color: var(--text-sub);
+      font-size: 20px;
+      pointer-events: none;
+    }
+
+    .input-wrap input,
+    .input-wrap select {
+      width: 100%;
+      height: 56px;
+      padding: 0 18px 0 48px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: #f9fafb;
+      font-family: 'Inter', system-ui, sans-serif;
+      font-size: 16px;
+      font-weight: 500;
+      color: var(--text);
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+      appearance: none;
+      -webkit-appearance: none;
+    }
+
+    .input-wrap input:focus,
+    .input-wrap select:focus {
+      border-color: var(--blue);
+      background: var(--white);
+      box-shadow: 0 0 0 4px rgba(29, 111, 243, 0.1);
+    }
+
+    .select-caret {
+      position: absolute;
+      right: 16px;
+      color: var(--text-sub);
+      font-size: 18px;
+      pointer-events: none;
+    }
+
+    .form-footer {
+      margin-top: 32px;
+      display: flex;
+      justify-content: flex-end;
+    }
+
+    .btn-save {
+      background: var(--blue);
+      color: #fff;
+      border: none;
+      height: 52px;
+      padding: 0 40px;
+      border-radius: 12px;
+      font-family: 'Inter', system-ui, sans-serif;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.18s, transform 0.15s;
+      box-shadow: 0 4px 16px rgba(29, 111, 243, 0.3);
+    }
+
+    .btn-save:hover { background: #1658d0; }
+    .btn-save:active { transform: translateY(1px); }
+
+    /* ── Toasts ─────────────────────────────────────── */
+    .toast-stack {
+      position: fixed;
+      top: 22px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .toast {
+      padding: 15px 24px;
+      border-radius: 12px;
+      color: #fff;
+      font-weight: 600;
+      font-size: 14px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.14);
+      animation: slideIn 0.3s ease;
+    }
+
+    .toast.success { background: #10b981; }
+    .toast.error   { background: #ef4444; }
+
+    @keyframes slideIn {
+      from { transform: translateX(120%); opacity: 0; }
+      to   { transform: translateX(0);    opacity: 1; }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="toast-stack">
+    {% for message in messages %}
+    <div class="toast {{ message.tags }}">{{ message }}</div>
+    {% endfor %}
+  </div>
+
+  <div class="shell">
+    <!-- ── Sidebar ── -->
+    <aside class="sidebar">
+      <div class="sidebar-brand">
+        <div class="brand-icon"><i class="ph-fill ph-shield-check"></i></div>
+        <div class="brand-text">
+          <strong>Attendance Portal</strong>
+          <span>Admin Dashboard</span>
+        </div>
+      </div>
+
+      <nav class="sidebar-nav">
+        <a href="{% url 'admin-dashboard' %}" class="nav-link">
+          <i class="ph-bold ph-squares-four"></i>
+          <span>Dashboard</span>
+        </a>
+        <a href="{% url 'admin-geofencing' %}" class="nav-link active">
+          <i class="ph-bold ph-map-trifold"></i>
+          <span>Geofencing</span>
+        </a>
+        <a href="#" class="nav-link">
+          <i class="ph-bold ph-users-three"></i>
+          <span>Student Management</span>
+        </a>
+        <a href="#" class="nav-link">
+          <i class="ph-bold ph-gear-six"></i>
+          <span>System Settings</span>
+        </a>
+      </nav>
+
+      <div class="sidebar-foot">
+        <div class="sidebar-user">
+          <div class="user-avatar"><i class="ph-bold ph-user"></i></div>
+          <div class="user-info">
+            <strong>Alex Morgan</strong>
+            <span>System Admin</span>
+          </div>
+          <a class="user-logout" href="{% url 'logout' %}" style="text-decoration: none;">
+            <i class="ph-bold ph-sign-out"></i>
+          </a>
+        </div>
+      </div>
+    </aside>
+
+    <!-- ── Main ── -->
+    <div class="main">
+      <header class="topbar">
+        <div class="topbar-title">
+          <i class="ph-fill ph-map-pin"></i>
+          Geofencing Settings
+        </div>
+        <div class="topbar-actions">
+          <button class="topbar-btn">
+            <i class="ph-bold ph-bell"></i>
+            <span class="notif-dot"></span>
+          </button>
+          <div class="user-circle"><i class="ph-bold ph-user"></i></div>
+        </div>
+      </header>
+
+      <main class="page-content">
+        <div class="page-head">
+          <h1>Attendance Boundaries</h1>
+          <p>Configure geographical restrictions for employee check-ins. Users can only clock in when inside these defined zones.</p>
+        </div>
+
+        <!-- Map -->
+        <div class="map-card">
+          <div id="geofencingMap"></div>
+        </div>
+
+        <!-- Form -->
+        <div class="form-card">
+          <div class="form-card-title">Coordinates &amp; Precision</div>
+          <div class="form-card-sub">Update the central point and radius for the geofence.</div>
+
+          <form action="{% url 'admin-geofencing' %}" method="POST">
+            {% csrf_token %}
+            <div class="form-grid">
+              <div class="form-group">
+                <label>Latitude</label>
+                <div class="input-wrap">
+                  <i class="ph-bold ph-map-pin icon-left"></i>
+                  <input type="number" step="any" name="latitude" id="latInput" value="{{ setting.latitude }}" required />
+                </div>
+              </div>
+              <div class="form-group">
+                <label>Longitude</label>
+                <div class="input-wrap">
+                  <i class="ph-bold ph-compass icon-left"></i>
+                  <input type="number" step="any" name="longitude" id="lonInput" value="{{ setting.longitude }}" required />
+                </div>
+              </div>
+              <div class="form-group">
+                <label>Radius (meters)</label>
+                <div class="input-wrap">
+                  <i class="ph-bold ph-crosshair icon-left"></i>
+                  <input type="number" name="radius" id="radInput" value="{{ setting.radius|floatformat:0 }}" required />
+                </div>
+              </div>
+              <div class="form-group">
+                <label>Verification Method</label>
+                <div class="input-wrap">
+                  <i class="ph-bold ph-shield-check icon-left"></i>
+                  <select name="verification_method">
+                    <option value="GPS Only" {% if setting.verification_method == "GPS Only" %}selected{% endif %}>GPS Only</option>
+                    <option value="IP Fallback" {% if setting.verification_method == "IP Fallback" %}selected{% endif %}>IP Fallback</option>
+                    <option value="Any Location" {% if setting.verification_method == "Any Location" %}selected{% endif %}>Any Location</option>
+                  </select>
+                  <i class="ph-bold ph-caret-down select-caret"></i>
+                </div>
+              </div>
+            </div>
+
+            <div class="form-footer">
+              <button type="submit" class="btn-save">Save Changes</button>
+            </div>
+          </form>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      const latInput = document.getElementById('latInput');
+      const lonInput = document.getElementById('lonInput');
+      const radInput = document.getElementById('radInput');
+
+      const initialLat = parseFloat(latInput.value) || 37.7749;
+      const initialLon = parseFloat(lonInput.value) || -122.4194;
+      const initialRad = parseFloat(radInput.value) || 500;
+
+      // Google Maps road tiles via Leaflet (same visual as Google Maps)
+      const map = L.map('geofencingMap', {
+        zoomControl: true,
+        attributionControl: false,
+        scrollWheelZoom: true
+      }).setView([initialLat, initialLon], 14);
+
+      L.tileLayer('https://mt{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
+        maxZoom: 21,
+        subdomains: ['0', '1', '2', '3'],
+      }).addTo(map);
+
+      // Geofence circle overlay on top of Google tiles
+      let circle = L.circle([initialLat, initialLon], {
+        color: '#1d6ff3',
+        fillColor: '#1d6ff3',
+        fillOpacity: 0.15,
+        radius: initialRad,
+        weight: 2.5
+      }).addTo(map);
+
+      let marker = L.marker([initialLat, initialLon], {
+        draggable: true
+      }).addTo(map);
+
+      function updateMap() {
+        const lat = parseFloat(latInput.value);
+        const lon = parseFloat(lonInput.value);
+        const rad = parseFloat(radInput.value);
+        if (!isNaN(lat) && !isNaN(lon)) {
+          marker.setLatLng([lat, lon]);
+          circle.setLatLng([lat, lon]);
+          if (!isNaN(rad)) circle.setRadius(rad);
+          map.panTo([lat, lon]);
+        }
+      }
+
+      marker.on('dragend', function (e) {
+        const pos = e.target.getLatLng();
+        latInput.value = pos.lat.toFixed(6);
+        lonInput.value = pos.lng.toFixed(6);
+        updateMap();
+      });
+
+      [latInput, lonInput, radInput].forEach(inp => {
+        inp.addEventListener('input', updateMap);
+      });
+
+      // ── Scroll isolation ──────────────────────────
+      const mapEl = document.getElementById('geofencingMap');
+      mapEl.addEventListener('wheel', function (e) { e.stopPropagation(); }, { passive: false });
+      mapEl.addEventListener('mouseenter', function () { document.body.style.overflow = 'hidden'; });
+      mapEl.addEventListener('mouseleave', function () { document.body.style.overflow = ''; });
+
+      // Auto-hide toasts
+      setTimeout(function () {
+        document.querySelectorAll('.toast').forEach(function (t) {
+          t.style.transition = 'opacity 0.4s';
+          t.style.opacity = '0';
+          setTimeout(function () { t.remove(); }, 400);
+        });
+      }, 4000);
+    })();
+  </script>
+</body>
+</html>
