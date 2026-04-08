@@ -21,7 +21,7 @@
       --text: #111827;
       --text-sub: #6b7280;
       --border: #e5e7eb;
-      --bg: #f9fafb;
+      --bg: #f1f5f9;
       --white: #ffffff;
       --sidebar-w: 280px;
       --topbar-h: 72px;
@@ -459,9 +459,9 @@
           <i class="ph-bold ph-map-trifold"></i>
           <span>Geofencing</span>
         </a>
-        <a href="#" class="nav-link">
+        <a href="{% url 'admin-user-management' %}" class="nav-link {% if active_page == 'user-management' %}active{% endif %}">
           <i class="ph-bold ph-users-three"></i>
-          <span>Student Management</span>
+          <span>User Management</span>
         </a>
         <a href="#" class="nav-link">
           <i class="ph-bold ph-gear-six"></i>
@@ -491,11 +491,6 @@
           Geofencing Settings
         </div>
         <div class="topbar-actions">
-          <button class="topbar-btn">
-            <i class="ph-bold ph-bell"></i>
-            <span class="notif-dot"></span>
-          </button>
-          <div class="user-circle"><i class="ph-bold ph-user"></i></div>
         </div>
       </header>
 

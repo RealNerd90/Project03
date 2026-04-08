@@ -1,0 +1,767 @@
+<!DOCTYPE html>
+<html lang="en">
+{% load static %}
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>New User Registration - Admin Portal</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="{% static 'style.css' %}" />
+  <script src="{% static 'theme.js' %}" defer></script>
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+
+  <style>
+    :root {
+      --blue: #0A7DFF;
+      --blue-light: #E6F2FF;
+      --text: #111827;
+      --text-sub: #6b7280;
+      --border: #e5e7eb;
+      --bg: #f8fafc;
+      --white: #ffffff;
+      --sidebar-w: 280px;
+      --topbar-h: 72px;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      height: 100%;
+      font-family: 'Inter', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      margin: 0;
+    }
+
+    /* ── Main Layout ── */
+    .shell {
+      display: flex;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    /* ── Sidebar (Reused) ── */
+    .sidebar {
+      width: var(--sidebar-w);
+      background: var(--white);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+      height: 100vh;
+      overflow-y: auto;
+      text-align: left;
+      line-height: normal;
+      z-index: 100;
+    }
+
+    .sidebar-brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 24px 22px 20px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .brand-icon {
+      width: 42px;
+      height: 42px;
+      background: var(--blue-light);
+      color: var(--blue);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      flex-shrink: 0;
+    }
+
+    .brand-text { display: flex; flex-direction: column; }
+    
+    .brand-text strong {
+      display: block;
+      font-size: 16px;
+      font-weight: 800;
+      color: var(--text);
+      line-height: 1.2;
+    }
+
+    .brand-text span {
+      font-size: 13px;
+      color: var(--text-sub);
+      font-weight: 500;
+    }
+
+    .sidebar-nav {
+      flex: 1;
+      padding: 14px 14px !important;
+      display: flex !important;
+      flex-direction: column !important;
+      gap: 4px !important;
+      margin: 0 !important;
+    }
+
+    .nav-link {
+      display: flex !important;
+      align-items: center !important;
+      gap: 14px !important;
+      padding: 14px 18px !important;
+      border-radius: 10px !important;
+      text-decoration: none !important;
+      color: var(--text-sub) !important;
+      font-weight: 600 !important;
+      font-size: 16px !important;
+      transition: background 0.15s, color 0.15s !important;
+      margin: 0 !important;
+      border: none !important;
+      background-color: transparent !important;
+    }
+
+    .nav-link i { 
+      font-size: 22px; 
+      flex-shrink: 0; 
+      width: 24px; 
+      display: inline-flex; 
+      justify-content: center; 
+      align-items: center; 
+    }
+
+    .nav-link:hover {
+      background: var(--bg) !important;
+      color: var(--text) !important;
+      border: none !important;
+    }
+
+    .nav-link.active {
+      background: var(--blue) !important;
+      color: #fff !important;
+      box-shadow: 0 6px 18px rgba(29,111,243,0.22) !important;
+      border: none !important;
+      border-bottom: none !important;
+      border-top: none !important;
+      outline: none !important;
+    }
+
+    .sidebar-foot {
+      padding: 16px 14px 20px;
+      border-top: 1px solid var(--border);
+    }
+    .sidebar-user {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 14px;
+      border-radius: 12px;
+      background: var(--bg);
+    }
+    .user-avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: var(--blue-light);
+      color: var(--blue);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      flex-shrink: 0;
+    }
+    .user-info { flex: 1; min-width: 0; }
+    .user-info strong { display: block; font-size: 14px; font-weight: 700; color: var(--text); }
+    .user-info span   { font-size: 12px; color: var(--text-sub); }
+    .user-logout { background: none; border: none; color: var(--text-sub); cursor: pointer; font-size: 20px; display: flex; align-items: center; }
+
+    /* ── Main Content Area ── */
+    .main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* ── Topbar ── */
+    .topbar {
+      height: var(--topbar-h);
+      background: var(--white);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 36px;
+      flex-shrink: 0;
+    }
+
+    .topbar-title {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .topbar-title i { color: var(--blue); font-size: 24px; }
+
+    .topbar-actions {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    /* ── Content ── */
+    .content-area {
+      flex: 1;
+      padding: 32px 40px;
+      overflow-y: auto;
+      -ms-overflow-style: none;  /* IE and Edge */
+      scrollbar-width: none;  /* Firefox */
+    }
+    .content-area::-webkit-scrollbar {
+      display: none; /* Chrome, Safari and Opera */
+    }
+
+    .page-header {
+      margin-bottom: 32px;
+    }
+    .page-title {
+      font-size: 32px;
+      font-weight: 800;
+      color: var(--text);
+      letter-spacing: -0.5px;
+      margin: 0 0 12px 0;
+    }
+    .page-subtitle {
+      font-size: 16px;
+      color: var(--text-sub);
+      max-width: 600px;
+      line-height: 1.5;
+      margin: 0;
+    }
+
+    /* ── Form Card ── */
+    .setup-card {
+      background: var(--white);
+      border-radius: 20px;
+      padding: 40px;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.04);
+      margin-bottom: 40px;
+    }
+
+    .step-section {
+      margin-bottom: 48px;
+    }
+
+    .step-header {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .step-badge {
+      background: var(--blue-light);
+      color: var(--blue);
+      font-size: 13px;
+      font-weight: 700;
+      padding: 6px 14px;
+      border-radius: 99px;
+      letter-spacing: 0.5px;
+    }
+
+    .step-title {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--text);
+      margin: 0;
+    }
+
+    /* Form Grid */
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      margin-bottom: 24px;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    
+    .form-group.full-width {
+      grid-column: 1 / -1;
+    }
+
+    .form-label {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .form-input {
+      padding: 16px 20px;
+      background: #f8fafc;
+      border: 1px solid transparent;
+      border-radius: 12px;
+      font-size: 15px;
+      color: var(--text);
+      transition: all 0.2s;
+      width: 100%;
+    }
+
+    .form-input:focus {
+      outline: none;
+      background: var(--white);
+      border-color: var(--blue);
+      box-shadow: 0 0 0 4px var(--blue-light);
+    }
+    
+    .form-input::placeholder {
+      color: #94a3b8;
+    }
+
+    .input-with-icon {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    .input-with-icon input {
+      padding-left: 48px;
+      padding-right: 48px;
+    }
+
+    .input-with-icon i.start-icon {
+      position: absolute;
+      left: 16px;
+      color: #94a3b8;
+      font-size: 20px;
+    }
+
+    .input-with-icon i.end-icon {
+      position: absolute;
+      right: 16px;
+      color: #94a3b8;
+      font-size: 20px;
+      cursor: pointer;
+    }
+
+    .form-hint {
+      font-size: 12px;
+      color: #94a3b8;
+      font-style: italic;
+      margin-top: 4px;
+    }
+
+    .step-desc {
+      font-size: 14px;
+      color: var(--text-sub);
+      margin-bottom: 24px;
+      line-height: 1.5;
+    }
+
+    /* Biometric Uploads Grid */
+    .bio-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 16px;
+    }
+
+    .bio-card {
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      transition: all 0.2s;
+      position: relative;
+      background: var(--white);
+    }
+    
+    .bio-card:hover {
+      border-color: #cbd5e1;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    }
+
+    .bio-preview {
+      width: 100%;
+      aspect-ratio: 1;
+      border-radius: 12px;
+      background: #f8fafc;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 12px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .bio-preview img.uploaded-img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: none;
+      position: absolute;
+      top: 0;
+      left: 0;
+      z-index: 2;
+    }
+
+    .bio-preview img.guide-img {
+      width: 70%;
+      height: 70%;
+      object-fit: contain;
+      opacity: 0.6;
+      transition: opacity 0.2s;
+    }
+
+    .bio-label {
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--text);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 8px;
+    }
+
+    .bio-card input[type="file"] {
+      display: none;
+    }
+
+    .bio-upload-btn {
+      width: 100%;
+      padding: 8px 0;
+      background: #f1f5f9;
+      color: var(--text);
+      border: none;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .bio-upload-btn:hover {
+      background: #e2e8f0;
+    }
+
+    .divider {
+      height: 1px;
+      background: var(--border);
+      margin: 40px 0;
+    }
+
+    /* Bottom Actions */
+    .form-actions {
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      gap: 24px;
+    }
+
+    .btn-text {
+      color: var(--text-sub);
+      font-size: 15px;
+      font-weight: 600;
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+    .btn-text:hover {
+      color: var(--text);
+    }
+
+    .btn-primary {
+      background: var(--blue);
+      color: var(--white);
+      border: none;
+      padding: 14px 32px;
+      border-radius: 12px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(10,125,255,0.2);
+      transition: all 0.2s;
+    }
+    .btn-primary:hover {
+      background: #0066d6;
+      box-shadow: 0 6px 16px rgba(10,125,255,0.3);
+      transform: translateY(-1px);
+    }
+
+    .page-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0 8px;
+      color: #94a3b8;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+
+    .footer-secure {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+  </style>
+</head>
+
+<body class="admin-dashboard">
+  <div class="shell">
+    
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-brand">
+        <div class="brand-icon"><i class="ph-fill ph-shield-check"></i></div>
+        <div class="brand-text">
+          <strong>Azure Ethos</strong>
+          <span>Admin Portal</span>
+        </div>
+      </div>
+
+      <nav class="sidebar-nav">
+        <a href="{% url 'admin-dashboard' %}" class="nav-link">
+          <i class="ph-bold ph-squares-four"></i>
+          <span>Dashboard</span>
+        </a>
+        <a href="{% url 'admin-geofencing' %}" class="nav-link">
+          <i class="ph-bold ph-map-trifold"></i>
+          <span>Geofencing</span>
+        </a>
+        <a href="{% url 'admin-user-management' %}" class="nav-link active">
+          <i class="ph-bold ph-users-three"></i>
+          <span>Student Management</span>
+        </a>
+        <a href="#" class="nav-link">
+          <i class="ph-bold ph-gear-six"></i>
+          <span>System Settings</span>
+        </a>
+      </nav>
+
+      <div class="sidebar-foot">
+        <div class="sidebar-user">
+          <div class="user-avatar" style="overflow:hidden;">
+            <!-- Placeholder for admin image -->
+            <img src="https://i.pravatar.cc/100?img=11" alt="Admin" style="width:100%;height:100%;object-fit:cover;">
+          </div>
+          <div class="user-info">
+            <strong>Admin User</strong>
+            <span>SUPER ADMIN</span>
+          </div>
+          <a class="user-logout" href="{% url 'logout' %}" style="text-decoration: none;">
+            <i class="ph-bold ph-sign-out"></i>
+          </a>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <div class="main">
+      
+      <!-- Topbar -->
+      <header class="topbar">
+        <div class="topbar-title">
+          <i class="ph-fill ph-user-plus"></i>
+          New User Registration Settings
+        </div>
+        <div class="topbar-actions">
+        </div>
+      </header>
+
+      <!-- Page Content -->
+      <main class="content-area">
+        
+        <div class="page-header">
+          <h1 class="page-title">New User Registration</h1>
+          <p class="page-subtitle">Securely enroll new students into the Azure Ethos ecosystem. Please ensure basic information is accurate and biometric data follows the orientation guidelines.</p>
+        </div>
+
+        <form method="POST" action="{% url 'admin-enroll-user' %}" enctype="multipart/form-data">
+          {% csrf_token %}
+          
+          <div class="setup-card">
+            
+            <!-- Step 1 -->
+            <div class="step-section">
+              <div class="step-header">
+                <span class="step-badge">STEP 01</span>
+                <h2 class="step-title">Basic Information</h2>
+              </div>
+              
+              <div class="form-grid">
+                <div class="form-group">
+                  <label class="form-label" for="id_fullname">FULL NAME</label>
+                  <input type="text" id="id_fullname" name="full_name" class="form-input" placeholder="e.g. Jonathan Aris" required>
+                </div>
+                
+                <div class="form-group">
+                  <label class="form-label" for="id_email">EMAIL ADDRESS</label>
+                  <input type="email" id="id_email" name="email" class="form-input" placeholder="name@compny.com" required>
+                </div>
+
+                <div class="form-group full-width">
+                  <label class="form-label" for="id_password">PASSWORD</label>
+                  <div class="input-with-icon">
+                    <i class="ph-bold ph-lock-key start-icon"></i>
+                    <input type="password" id="id_password" name="password" class="form-input" placeholder="•••••••••••••" required>
+                    <i class="ph-bold ph-eye end-icon" id="togglePassword"></i>
+                  </div>
+                  <div class="form-hint">Generated passwords must meet institutional security standards.</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="divider"></div>
+
+            <!-- Step 2 -->
+            <div class="step-section" style="margin-bottom:0;">
+              <div class="step-header">
+                <span class="step-badge">STEP 02</span>
+                <h2 class="step-title">Biometric Face Data Enrollment</h2>
+              </div>
+              <p class="step-desc">For accurate facial recognition, upload five distinct perspectives. Ensure the background is neutral and lighting is consistent.</p>
+              
+              <div class="bio-grid">
+                <!-- Front View -->
+                <div class="bio-card">
+                  <div class="bio-preview">
+                    <img src="{% static 'front view.png' %}" class="guide-img" id="icon-front" alt="Front Guide">
+                    <img class="uploaded-img" id="preview-front" alt="Front Preview">
+                  </div>
+                  <div class="bio-label">FRONT VIEW</div>
+                  <input type="file" id="file-front" name="front_view" accept="image/jpeg, image/png, image/jpg" required onchange="previewImage(this, 'front')">
+                  <button type="button" class="bio-upload-btn" onclick="document.getElementById('file-front').click()">UPLOAD</button>
+                </div>
+
+                <!-- Right Profile -->
+                <div class="bio-card">
+                  <div class="bio-preview">
+                    <img src="{% static 'right view .png' %}" class="guide-img" id="icon-right" alt="Right Guide">
+                    <img class="uploaded-img" id="preview-right" alt="Right Preview">
+                  </div>
+                  <div class="bio-label">RIGHT PROFILE</div>
+                  <input type="file" id="file-right" name="right_profile" accept="image/jpeg, image/png, image/jpg" required onchange="previewImage(this, 'right')">
+                  <button type="button" class="bio-upload-btn" onclick="document.getElementById('file-right').click()">UPLOAD</button>
+                </div>
+
+                <!-- Left Profile -->
+                <div class="bio-card">
+                  <div class="bio-preview">
+                    <img src="{% static 'left angle.png' %}" class="guide-img" id="icon-left" alt="Left Guide">
+                    <img class="uploaded-img" id="preview-left" alt="Left Preview">
+                  </div>
+                  <div class="bio-label">LEFT PROFILE</div>
+                  <input type="file" id="file-left" name="left_profile" accept="image/jpeg, image/png, image/jpg" required onchange="previewImage(this, 'left')">
+                  <button type="button" class="bio-upload-btn" onclick="document.getElementById('file-left').click()">UPLOAD</button>
+                </div>
+
+                <!-- Upward Angle -->
+                <div class="bio-card">
+                  <div class="bio-preview">
+                    <img src="{% static 'up view.png' %}" class="guide-img" id="icon-up" alt="Up Guide">
+                    <img class="uploaded-img" id="preview-up" alt="Up Preview">
+                  </div>
+                  <div class="bio-label">UPWARD ANGLE</div>
+                  <input type="file" id="file-up" name="upward_angle" accept="image/jpeg, image/png, image/jpg" required onchange="previewImage(this, 'up')">
+                  <button type="button" class="bio-upload-btn" onclick="document.getElementById('file-up').click()">UPLOAD</button>
+                </div>
+
+                <!-- Downward Angle -->
+                <div class="bio-card">
+                  <div class="bio-preview">
+                    <img src="{% static 'down view.png' %}" class="guide-img" id="icon-down" alt="Down Guide">
+                    <img class="uploaded-img" id="preview-down" alt="Down Preview">
+                  </div>
+                  <div class="bio-label">DOWNWARD ANGLE</div>
+                  <input type="file" id="file-down" name="downward_angle" accept="image/jpeg, image/png, image/jpg" required onchange="previewImage(this, 'down')">
+                  <button type="button" class="bio-upload-btn" onclick="document.getElementById('file-down').click()">UPLOAD</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="divider"></div>
+
+            <div class="form-actions">
+              <button type="button" class="btn-text" onclick="discardDraft()">Discard Draft</button>
+              <button type="submit" class="btn-primary">Finalize Enrollment</button>
+            </div>
+            
+          </div>
+        </form>
+
+        <div class="page-footer">
+          <div>AZURE ETHOS ENROLLMENT PROTOCOL V2.4</div>
+          <div class="footer-secure">
+            <i class="ph-bold ph-lock-key"></i>
+            AES-256 ENCRYPTED
+          </div>
+        </div>
+      </main>
+      
+    </div>
+  </div>
+
+  <script>
+    // Password visibility toggler
+    const togglePassword = document.getElementById('togglePassword');
+    const passwordInput = document.getElementById('id_password');
+    togglePassword.addEventListener('click', () => {
+      const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+      passwordInput.setAttribute('type', type);
+      togglePassword.classList.toggle('ph-eye');
+      togglePassword.classList.toggle('ph-eye-slash');
+    });
+
+    // Image previewer
+    function previewImage(input, position) {
+      const file = input.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          const imgElem = document.getElementById('preview-' + position);
+          const iconElem = document.getElementById('icon-' + position);
+          imgElem.src = e.target.result;
+          imgElem.style.display = 'block';
+          iconElem.style.display = 'none';
+        }
+        reader.readAsDataURL(file);
+      }
+    }
+
+    // Discard Draft / Reset function
+    function discardDraft() {
+      if (confirm('Are you sure you want to discard this draft? This will clear all information entered.')) {
+        // Reset text inputs
+        const form = document.querySelector('form');
+        form.reset();
+        
+        // Reset biometric previews
+        const positions = ['front', 'right', 'left', 'up', 'down'];
+        positions.forEach(pos => {
+          const imgElem = document.getElementById('preview-' + pos);
+          const iconElem = document.getElementById('icon-' + pos);
+          
+          if (imgElem) {
+            imgElem.src = '';
+            imgElem.style.display = 'none';
+          }
+          if (iconElem) {
+            iconElem.style.display = 'block';
+          }
+        });
+      }
+    }
+  </script>
+</body>
+</html>

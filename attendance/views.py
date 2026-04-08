@@ -406,6 +406,122 @@ def admin_geofencing(request: HttpRequest) -> HttpResponse:
     return render(request, "admin_geofencing.html", context)
 
 
+def admin_user_management(request: HttpRequest) -> HttpResponse:
+    """Manage and view all registered users in the system."""
+    if not request.session.get("is_admin"):
+        return redirect("manual-login")
+
+    from django.core.paginator import Paginator
+    
+    users_list = RegisteredUser.objects.all().order_by("name")
+    total_count = users_list.count()
+    
+    # We will simulate "Active", "Pending Approval", "Archived" based on role or just default to Active
+    # In a real system, there should be a status field in RegisteredUser
+    active_count = users_list.filter(account_role__in=["employee", "student", "teacher"]).count()
+    if active_count == 0:
+        active_count = total_count
+        
+    paginator = Paginator(users_list, 10) # Show 10 users per page
+    page_number = request.GET.get("page", 1)
+    page_obj = paginator.get_page(page_number)
+
+    # Enhance users with avatar URLs
+    enriched_users = []
+    for u in page_obj:
+        photo_url = _profile_photo_url_for(u.name)
+        # Mock ID formatting
+        formatted_id = f"#ST-{82900 + u.id}" if u.id else "#ST-00000"
+        
+        # Mocking status logic:
+        # If created in the last 2 days without a password, maybe pending. Otherwise active.
+        # But we'll just simplify to Active for now, and rely on Django templating for badge formatting.
+        status_label = "Active"
+        status_class = "bg-green-100 text-green-700" 
+        
+        enriched_users.append({
+            "model": u,
+            "photo_url": photo_url,
+            "formatted_id": formatted_id,
+            "status_label": status_label,
+            "status_class": status_class,
+        })
+
+    context = {
+        "active_page": "user-management",
+        "total_count": f"{total_count:,}",
+        "active_count": f"{active_count:,}",
+        "page_obj": page_obj,
+        "users": enriched_users,
+    }
+    return render(request, "admin_user_management.html", context)
+
+
+def admin_enroll_user(request: HttpRequest) -> HttpResponse:
+    """Admin view for manually registering new users with biometric data."""
+    if not request.session.get("is_admin"):
+        return redirect("manual-login")
+
+    if request.method == "POST":
+        full_name = (request.POST.get("full_name") or "").strip()
+        email = (request.POST.get("email") or "").strip()
+        password = (request.POST.get("password") or "").strip()
+
+        if not full_name:
+            messages.error(request, "Full name is required.")
+            return redirect("admin-enroll-user")
+
+        # Create or update user metadata
+        try:
+            user, created = RegisteredUser.objects.get_or_create(name=full_name)
+            if email:
+                user.email = email
+            if password:
+                user.password = password
+            if created:
+                user.dob_display = ""
+                user.gender = ""
+                user.account_role = ""
+            user.save()
+        except Exception as exc:
+            messages.error(request, f"Failed to save user info.")
+            return redirect("admin-enroll-user")
+
+        # Process uploaded images
+        system = get_system()
+        student_dir = os.path.join(system.database_path, full_name)
+        os.makedirs(student_dir, exist_ok=True)
+
+        try:
+            from PIL import Image
+            file_map = {
+                "front_view": "front",
+                "right_profile": "right",
+                "left_profile": "left",
+                "upward_angle": "up",
+                "downward_angle": "down"
+            }
+            for field_name, direction in file_map.items():
+                upload = request.FILES.get(field_name)
+                if upload:
+                    img = Image.open(upload).convert("RGB")
+                    save_path = os.path.join(student_dir, f"{direction}.jpg")
+                    img.save(save_path)
+            
+            try:
+                system.load_database()
+            except Exception:
+                pass
+
+        except Exception as exc:
+            messages.error(request, f"Error processing biometric images.")
+            return redirect("admin-enroll-user")
+
+        return redirect("admin-user-management")
+
+    return render(request, "admin_user_enrollment.html")
+
+
 def analytics(request: HttpRequest) -> HttpResponse:
     """Render the analytics page with real-time statistics and trends."""
     display_name = _normalize_display_name(request.session.get("display_name"))
