@@ -151,9 +151,15 @@
                         <i class="ph-bold ph-sign-in"></i> Check In
                     </a>
                     {% endif %}
+                    {% if can_checkout %}
                     <a href="{% url 'scanner' %}?action=checkout" class="btn btn-outline btn-xl flex-1 justify-center gap-2">
                         <i class="ph-bold ph-sign-out"></i> Check Out
                     </a>
+                    {% else %}
+                    <button type="button" class="btn btn-outline btn-xl flex-1 justify-center gap-2" title="Check in first to enable checkout" disabled>
+                        <i class="ph-bold ph-sign-out"></i> Check Out
+                    </button>
+                    {% endif %}
                 </div>
 
                 <!-- Recent Activity Card -->

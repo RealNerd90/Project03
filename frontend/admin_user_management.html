@@ -55,7 +55,6 @@
       overflow-y: auto;
       text-align: left;
       line-height: normal;
-      z-index: 100;
     }
 
     .sidebar-brand {
@@ -63,7 +62,6 @@
       align-items: center;
       gap: 12px;
       padding: 24px 22px 20px;
-      border-bottom: 1px solid var(--border);
     }
 
     .brand-icon {
@@ -509,7 +507,7 @@
           <i class="ph-bold ph-users-three"></i>
           <span>User Management</span>
         </a>
-        <a href="#" class="nav-link">
+        <a href="{% url 'admin-system-settings' %}" class="nav-link {% if active_page == 'system-settings' %}active{% endif %}">
           <i class="ph-bold ph-gear-six"></i>
           <span>System Settings</span>
         </a>

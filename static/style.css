@@ -255,6 +255,15 @@ a {
     transform: translateY(-1px);
 }
 
+.btn:disabled,
+.btn.disabled {
+    opacity: 0.5;
+    cursor: not-allowed !important;
+    pointer-events: none;
+    transform: none !important;
+    box-shadow: none !important;
+}
+
 .btn-large {
     padding: 0.75rem 2rem;
     font-size: 1rem;
@@ -5255,6 +5264,14 @@ input:checked+.slider:before {
 
 .cursor-pointer {
     cursor: pointer;
+}
+
+.cursor-not-allowed {
+    cursor: not-allowed;
+}
+
+.opacity-50 {
+    opacity: 0.5;
 }
 
 .transition-all {

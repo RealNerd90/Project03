@@ -145,6 +145,11 @@
       outline: none !important;
     }
 
+    .nav-link::before,
+    .nav-link::after {
+      display: none !important;
+    }
+
     .sidebar-foot {
       padding: 16px 14px 20px;
       border-top: 1px solid var(--border);
@@ -204,6 +209,128 @@
     }
 
     .topbar-title i { color: var(--blue); font-size: 24px; }
+
+    .topbar-back {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      color: var(--text-sub) !important;
+      transition: all 0.2s;
+      margin-right: 12px;
+      border: 1px solid var(--border);
+    }
+
+    .topbar-back i {
+      color: var(--text-sub) !important;
+      font-size: 20px !important;
+    }
+
+    .topbar-back:hover {
+      background: var(--bg);
+      color: var(--text) !important;
+      border-color: var(--blue);
+    }
+
+    .topbar-back:hover i {
+      color: var(--blue) !important;
+    }
+
+    /* ── Confirmation Modal ── */
+    .confirm-modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.4);
+      backdrop-filter: blur(4px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 10000;
+      padding: 24px;
+    }
+    .confirm-modal-overlay.open { display: flex; }
+    
+    .confirm-modal-card {
+      background: white;
+      border-radius: 20px;
+      width: 100%;
+      max-width: 380px;
+      padding: 48px 32px 32px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+      animation: modalFadeInUp 0.3s ease-out forwards;
+    }
+
+    .confirm-modal-icon {
+      width: 72px;
+      height: 72px;
+      border-radius: 50%;
+      background: #fef3c7;
+      color: #d97706;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 36px;
+      margin-bottom: 24px;
+      box-shadow: 0 4px 10px rgba(217, 119, 6, 0.15);
+    }
+
+    .confirm-modal-title {
+      font-size: 21px;
+      font-weight: 700;
+      color: #0f172a;
+      margin-bottom: 14px;
+    }
+
+    .confirm-modal-subtitle {
+      font-size: 15px;
+      color: #475569;
+      line-height: 1.6;
+      margin-bottom: 32px;
+    }
+
+    .confirm-modal-footer {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      width: 100%;
+    }
+
+    .btn-confirm {
+      background: #ef4444;
+      color: white;
+      border: none;
+      padding: 14px;
+      border-radius: 12px;
+      font-weight: 700;
+      font-size: 15px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .btn-confirm:hover { background: #dc2626; }
+
+    .btn-cancel {
+      background: #f1f5f9;
+      color: #475569;
+      border: none;
+      padding: 14px;
+      border-radius: 12px;
+      font-weight: 600;
+      font-size: 15px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .btn-cancel:hover { background: #e2e8f0; }
+
+    @keyframes modalFadeInUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
 
     .topbar-actions {
       display: flex;
@@ -539,11 +666,11 @@
           <i class="ph-bold ph-map-trifold"></i>
           <span>Geofencing</span>
         </a>
-        <a href="{% url 'admin-user-management' %}" class="nav-link active">
+        <a href="{% url 'admin-user-management' %}" class="nav-link {% if active_page == 'user-management' %}active{% endif %}">
           <i class="ph-bold ph-users-three"></i>
-          <span>Student Management</span>
+          <span>User Management</span>
         </a>
-        <a href="#" class="nav-link">
+        <a href="{% url 'admin-system-settings' %}" class="nav-link {% if active_page == 'system-settings' %}active{% endif %}">
           <i class="ph-bold ph-gear-six"></i>
           <span>System Settings</span>
         </a>
@@ -572,6 +699,9 @@
       <!-- Topbar -->
       <header class="topbar">
         <div class="topbar-title">
+          <a href="{% url 'admin-user-management' %}" class="topbar-back" title="Back to User Management">
+            <i class="ph-bold ph-arrow-left"></i>
+          </a>
           <i class="ph-fill ph-user-plus"></i>
           New User Registration Settings
         </div>
@@ -584,7 +714,7 @@
         
         <div class="page-header">
           <h1 class="page-title">New User Registration</h1>
-          <p class="page-subtitle">Securely enroll new students into the Azure Ethos ecosystem. Please ensure basic information is accurate and biometric data follows the orientation guidelines.</p>
+          <p class="page-subtitle">Securely enroll new users into the Azure Ethos ecosystem. Please ensure basic information is accurate and biometric data follows the orientation guidelines.</p>
         </div>
 
         <form method="POST" action="{% url 'admin-enroll-user' %}" enctype="multipart/form-data">
@@ -712,6 +842,23 @@
     </div>
   </div>
 
+  <!-- Navigation Confirmation Modal -->
+  <div class="confirm-modal-overlay" id="confirmModal" aria-hidden="true">
+    <div class="confirm-modal-card" role="dialog" aria-modal="true" aria-label="Confirm Navigation">
+      <div class="confirm-modal-icon">
+        <i class="ph-fill ph-warning"></i>
+      </div>
+      <h1 class="confirm-modal-title">Are you sure to quit?</h1>
+      <p class="confirm-modal-subtitle">
+        You have unsaved information in this form. Do you really want to leave?
+      </p>
+      <div class="confirm-modal-footer">
+        <button type="button" class="btn-confirm" id="confirmDiscardBtn">Yes</button>
+        <button type="button" class="btn-cancel" id="confirmCancelBtn">No</button>
+      </div>
+    </div>
+  </div>
+
   <script>
     // Password visibility toggler
     const togglePassword = document.getElementById('togglePassword');
@@ -762,6 +909,52 @@
         });
       }
     }
+
+    // --- Navigation Confirmation Logic ---
+    (function() {
+      let isDirty = false;
+      const enrollForm = document.querySelector('form');
+      const backBtn = document.querySelector('.topbar-back');
+      const confirmModal = document.getElementById('confirmModal');
+      const discardBtn = document.getElementById('confirmDiscardBtn');
+      const cancelBtn = document.getElementById('confirmCancelBtn');
+
+      if (!confirmModal || !enrollForm) return;
+
+      // Mark form as dirty when any input changes
+      const inputs = enrollForm.querySelectorAll('input, select, textarea');
+      inputs.forEach(input => {
+        input.addEventListener('change', () => { isDirty = true; });
+        input.addEventListener('input', () => { isDirty = true; });
+      });
+
+      if (backBtn) {
+        backBtn.addEventListener('click', (e) => {
+          if (isDirty) {
+            e.preventDefault();
+            confirmModal.classList.add('open');
+          }
+        });
+      }
+
+      if (cancelBtn) {
+        cancelBtn.addEventListener('click', () => {
+          confirmModal.classList.remove('open');
+        });
+      }
+
+      if (discardBtn && backBtn) {
+        discardBtn.addEventListener('click', () => {
+          isDirty = false; // Reset flag to allow navigation
+          window.location.href = backBtn.href;
+        });
+      }
+
+      // Close on outside click
+      confirmModal.addEventListener('click', (e) => {
+        if (e.target === confirmModal) confirmModal.classList.remove('open');
+      });
+    })();
   </script>
 </body>
 </html>

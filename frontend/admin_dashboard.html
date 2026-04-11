@@ -40,7 +40,7 @@
           <i class="ph-bold ph-users-three"></i>
           <span>User Management</span>
         </a>
-        <a href="#" class="nav-link">
+        <a href="{% url 'admin-system-settings' %}" class="nav-link {% if active_page == 'system-settings' %}active{% endif %}">
           <i class="ph-bold ph-gear-six"></i>
           <span>System Settings</span>
         </a>
@@ -275,7 +275,7 @@
               </div>
               {% endif %}
             </div>
-            <div class="admin-kpi-label">Total Registered Students</div>
+            <div class="admin-kpi-label">Total Registered Users</div>
             <div class="admin-kpi-value">{{ total_students|default:"0" }}</div>
           </article>
 
@@ -416,7 +416,7 @@
 
           <div class="admin-table">
             <div class="admin-table-row admin-table-row--head">
-              <div>STUDENT</div>
+              <div>USER</div>
               <div>CHECKIN</div>
               <div>CHECKOUT</div>
               <div>GEOFENCE</div>

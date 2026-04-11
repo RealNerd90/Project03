@@ -51,6 +51,8 @@
       flex-shrink: 0;
       height: 100vh;
       overflow-y: auto;
+      text-align: left;
+      line-height: normal;
     }
 
     .sidebar-brand {
@@ -123,9 +125,17 @@
     }
 
     .nav-link.active {
-      background: var(--blue);
-      color: #fff;
-      box-shadow: 0 6px 18px rgba(29,111,243,0.22);
+      background: var(--blue) !important;
+      color: #fff !important;
+      box-shadow: 0 6px 18px rgba(29,111,243,0.22) !important;
+      border: none !important;
+      border-bottom: none !important;
+      outline: none !important;
+    }
+
+    .nav-link::before,
+    .nav-link::after {
+      display: none !important;
     }
 
     .sidebar-foot {
@@ -463,7 +473,7 @@
           <i class="ph-bold ph-users-three"></i>
           <span>User Management</span>
         </a>
-        <a href="#" class="nav-link">
+        <a href="{% url 'admin-system-settings' %}" class="nav-link {% if active_page == 'system-settings' %}active{% endif %}">
           <i class="ph-bold ph-gear-six"></i>
           <span>System Settings</span>
         </a>

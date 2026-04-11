@@ -215,6 +215,9 @@ def dashboard(request: HttpRequest) -> HttpResponse:
             "calendar_cells": calendar_cells,
             "calendar_month_label": calendar_month_label,
             "already_checked_in_today": today in present_days,
+            "can_checkout": AttendanceRecord.objects.filter(
+                name=display_name, date=today, status=AttendanceRecord.STATUS_PRESENT, check_out_time__isnull=True
+            ).exists(),
         },
     )
 
@@ -519,7 +522,18 @@ def admin_enroll_user(request: HttpRequest) -> HttpResponse:
 
         return redirect("admin-user-management")
 
-    return render(request, "admin_user_enrollment.html")
+    return render(request, "admin_user_enrollment.html", {"active_page": "user-management"})
+
+
+def admin_system_settings(request: HttpRequest) -> HttpResponse:
+    """Admin system configuration and general settings."""
+    if not request.session.get("is_admin"):
+        return redirect("manual-login")
+    
+    context = {
+        "active_page": "system-settings",
+    }
+    return render(request, "admin_system_settings.html", context)
 
 
 def analytics(request: HttpRequest) -> HttpResponse:
@@ -1474,13 +1488,13 @@ def attendance_checkout_scan(request: HttpRequest) -> JsonResponse:
             record.status = status
         record.save()
     else:
-        record = AttendanceRecord.objects.create(
-            name=name,
-            date=now.date(),
-            time=None,
-            status=status,
-            check_out_time=checkout_time,
-            geofence="Main Entrance",
+        return JsonResponse(
+            {
+                "success": False,
+                "name": name,
+                "message": "No check-in record found for today. Please check in first.",
+            },
+            status=200,
         )
 
     return JsonResponse(

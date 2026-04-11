@@ -9,6 +9,7 @@ urlpatterns = [
     path("admin-dashboard/geofencing/", views.admin_geofencing, name="admin-geofencing"),
     path("admin-dashboard/users/", views.admin_user_management, name="admin-user-management"),
     path("admin-dashboard/enroll/", views.admin_enroll_user, name="admin-enroll-user"),
+    path("admin-dashboard/settings/", views.admin_system_settings, name="admin-system-settings"),
     path("analytics/", views.analytics, name="analytics"),
     path("profile/", views.profile_view, name="profile"),
     path("profile/edit/", views.profile_edit_view, name="profile-edit"),
