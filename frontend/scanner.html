@@ -429,8 +429,12 @@
 
                     setTimeout(() => {
                         const timestamp = result.timestamp ? new Date(result.timestamp) : new Date();
-                        const date = timestamp.toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
-                        const time = timestamp.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                        const timezone = '{{ system_settings.timezone|default:"Asia/Kolkata" }}';
+                        const dateOptions = { timeZone: timezone, year: 'numeric', month: 'long', day: 'numeric' };
+                        const timeOptions = { timeZone: timezone, hour: '2-digit', minute: '2-digit', second: '2-digit' };
+                        
+                        const date = timestamp.toLocaleDateString('en-US', dateOptions);
+                        const time = timestamp.toLocaleTimeString('en-US', timeOptions);
                         const params = new URLSearchParams({
                             name: result.name || '',
                             action: isCheckout ? 'checkout' : 'checkin',

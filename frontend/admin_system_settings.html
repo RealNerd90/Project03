@@ -667,11 +667,6 @@
           <span>System Configuration</span>
         </div>
         <div class="topbar-right">
-          <button class="notification-btn">
-            <i class="ph-bold ph-bell"></i>
-            <span class="notification-dot"></span>
-          </button>
-          <button type="submit" form="settingsForm" class="btn-save-sm">Save Changes</button>
         </div>
       </header>
 
@@ -693,15 +688,27 @@
             
             <div class="form-grid-2">
               <div class="form-group">
-                <label class="form-label">System Name</label>
-                <input type="text" class="form-input" name="system_name" value="Attendance Portal v2.0">
+                <label class="form-label">Default Language</label>
+                <select class="form-select" name="default_language">
+                  <option value="English" {% if setting.default_language == 'English' %}selected{% endif %}>English (US/UK)</option>
+                  <option value="Hindi" {% if setting.default_language == 'Hindi' %}selected{% endif %}>Hindi (हिन्दी)</option>
+                  <option value="Tamil" {% if setting.default_language == 'Tamil' %}selected{% endif %}>Tamil (தமிழ்)</option>
+                  <option value="Telugu" {% if setting.default_language == 'Telugu' %}selected{% endif %}>Telugu (తెలుగు)</option>
+                  <option value="Bengali" {% if setting.default_language == 'Bengali' %}selected{% endif %}>Bengali (বাংলা)</option>
+                  <option value="Marathi" {% if setting.default_language == 'Marathi' %}selected{% endif %}>Marathi (मराठी)</option>
+                </select>
               </div>
               <div class="form-group">
                 <label class="form-label">Time Zone</label>
                 <select class="form-select" name="timezone">
-                  <option selected>EST (Eastern Standard Time)</option>
-                  <option>UTC (Universal Coordinated Time)</option>
-                  <option>PST (Pacific Standard Time)</option>
+                  <option value="Asia/Kolkata" {% if setting.timezone == 'Asia/Kolkata' %}selected{% endif %}>IST (India Standard Time - Kolkata)</option>
+                  <option value="UTC" {% if setting.timezone == 'UTC' %}selected{% endif %}>UTC (Universal Coordinated Time)</option>
+                  <option value="Europe/London" {% if setting.timezone == 'Europe/London' %}selected{% endif %}>GMT/BST (London)</option>
+                  <option value="America/New_York" {% if setting.timezone == 'America/New_York' %}selected{% endif %}>EST/EDT (New York)</option>
+                  <option value="Asia/Dubai" {% if setting.timezone == 'Asia/Dubai' %}selected{% endif %}>GST (Dubai)</option>
+                  <option value="Asia/Singapore" {% if setting.timezone == 'Asia/Singapore' %}selected{% endif %}>SGT (Singapore)</option>
+                  <option value="Asia/Tokyo" {% if setting.timezone == 'Asia/Tokyo' %}selected{% endif %}>JST (Tokyo)</option>
+                  <option value="Australia/Sydney" {% if setting.timezone == 'Australia/Sydney' %}selected{% endif %}>AEST/AEDT (Sydney)</option>
                 </select>
               </div>
             </div>
@@ -717,7 +724,7 @@
                 </div>
               </div>
               <label class="switch">
-                <input type="checkbox" name="maintenance_mode">
+                <input type="checkbox" name="maintenance_mode" {% if setting.maintenance_mode %}checked{% endif %}>
                 <span class="slider"></span>
               </label>
             </div>
@@ -734,7 +741,7 @@
               <div class="form-group">
                 <label class="form-label">Auto-delete activity logs after</label>
                 <div class="input-with-label">
-                  <input type="number" class="form-input" name="retention_days" value="90">
+                  <input type="number" class="form-input" name="retention_days" value="{{ setting.retention_days }}">
                   <span class="unit">Days</span>
                 </div>
               </div>
@@ -749,7 +756,7 @@
               </div>
               <div class="form-group" style="margin-bottom: 20px;">
                 <label class="form-label">Admin Email</label>
-                <input type="email" class="form-input" name="admin_email" value="alex.johnson@attendanceportal.com">
+                <input type="email" class="form-input" name="admin_email" value="{{ setting.admin_email }}">
               </div>
               <div class="form-group">
                 <label class="form-label">Security Actions</label>
@@ -769,14 +776,14 @@
               <div class="form-group">
                 <label class="form-label">Reminder Interval</label>
                 <select class="form-select" name="reminder_interval">
-                  <option selected>Daily Reminders</option>
-                  <option>Twice Daily</option>
-                  <option>Weekly</option>
+                  <option value="Daily Reminders" {% if setting.reminder_interval == 'Daily Reminders' %}selected{% endif %}>Daily Reminders</option>
+                  <option value="Twice Daily" {% if setting.reminder_interval == 'Twice Daily' %}selected{% endif %}>Twice Daily</option>
+                  <option value="Weekly" {% if setting.reminder_interval == 'Weekly' %}selected{% endif %}>Weekly</option>
                 </select>
               </div>
               <div class="form-group">
                 <label class="form-label">Scheduled Time</label>
-                <input type="time" class="form-input" name="reminder_time" value="08:30">
+                <input type="time" class="form-input" name="reminder_time" value="{{ setting.reminder_time|time:'H:i' }}">
               </div>
             </div>
 
@@ -791,7 +798,7 @@
                 <span>Play a notification sound when a reminder is triggered</span>
               </div>
               <label class="switch">
-                <input type="checkbox" name="enable_reminder_sound" checked>
+                <input type="checkbox" name="enable_reminder_sound" {% if setting.enable_reminder_sound %}checked{% endif %}>
                 <span class="slider"></span>
               </label>
             </div>

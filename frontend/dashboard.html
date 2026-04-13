@@ -324,15 +324,43 @@
 
             function updateClock() {
                 const now = new Date();
+                const timezone = '{{ system_settings.timezone|default:"Asia/Kolkata" }}';
 
-                hoursEl.textContent = pad(now.getHours());
-                minutesEl.textContent = pad(now.getMinutes());
-                secondsEl.textContent = pad(now.getSeconds());
+                // Format time using selected timezone
+                const timeOptions = {
+                    timeZone: timezone,
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit',
+                    hour12: false
+                };
+                const timeStr = now.toLocaleTimeString('en-US', timeOptions);
+                const [h, m, s] = timeStr.split(':');
 
-                const weekday = weekdayNames[now.getDay()];
-                const month = monthNames[now.getMonth()];
-                const dayWithSuffix = getOrdinalSuffix(now.getDate());
-                const year = now.getFullYear();
+                hoursEl.textContent = h;
+                minutesEl.textContent = m;
+                secondsEl.textContent = s;
+
+                // Format date using selected timezone
+                const dateOptions = {
+                    timeZone: timezone,
+                    weekday: 'long',
+                    month: 'long',
+                    day: 'numeric',
+                    year: 'numeric'
+                };
+                
+                // Get parts to reformat to the specific format "Monday, October 23rd, 2023"
+                const formatter = new Intl.DateTimeFormat('en-US', dateOptions);
+                const parts = formatter.formatToParts(now);
+                const partMap = {};
+                parts.forEach(p => partMap[p.type] = p.value);
+                
+                const weekday = partMap.weekday;
+                const month = partMap.month;
+                const day = parseInt(partMap.day);
+                const year = partMap.year;
+                const dayWithSuffix = getOrdinalSuffix(day);
 
                 dateEl.textContent = `${weekday}, ${month} ${dayWithSuffix}, ${year}`;
             }

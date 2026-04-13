@@ -530,8 +530,38 @@ def admin_system_settings(request: HttpRequest) -> HttpResponse:
     if not request.session.get("is_admin"):
         return redirect("manual-login")
     
+    from .models import SystemSetting
+    setting = SystemSetting.objects.first()
+    if not setting:
+        setting = SystemSetting.objects.create()
+
+    if request.method == "POST":
+        try:
+            setting.default_language = request.POST.get("default_language", setting.default_language)
+            setting.timezone = request.POST.get("timezone", setting.timezone)
+            setting.maintenance_mode = "maintenance_mode" in request.POST
+            setting.retention_days = int(request.POST.get("retention_days", setting.retention_days))
+            setting.admin_email = request.POST.get("admin_email", setting.admin_email)
+            setting.reminder_interval = request.POST.get("reminder_interval", setting.reminder_interval)
+            
+            # Reminder time handle
+            r_time = request.POST.get("reminder_time")
+            if r_time:
+                try:
+                    setting.reminder_time = datetime.strptime(r_time, "%H:%M").time()
+                except ValueError:
+                    pass
+            
+            setting.enable_reminder_sound = "enable_reminder_sound" in request.POST
+            setting.save()
+            messages.success(request, "System settings updated successfully.")
+            return redirect("admin-system-settings")
+        except Exception as e:
+            messages.error(request, f"Error updating settings: {e}")
+
     context = {
         "active_page": "system-settings",
+        "setting": setting, # Explicitly pass for clarity
     }
     return render(request, "admin_system_settings.html", context)
 

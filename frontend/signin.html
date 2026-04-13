@@ -397,8 +397,12 @@
                 // Show the Sign-in Successful page (then it redirects to dashboard).
                 setTimeout(() => {
                     const ts = result.timestamp ? new Date(result.timestamp) : new Date();
-                    const date = ts.toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
-                    const time = ts.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                    const timezone = '{{ system_settings.timezone|default:"Asia/Kolkata" }}';
+                    const dateOptions = { timeZone: timezone, year: 'numeric', month: 'long', day: 'numeric' };
+                    const timeOptions = { timeZone: timezone, hour: '2-digit', minute: '2-digit', second: '2-digit' };
+                    
+                    const date = ts.toLocaleDateString('en-US', dateOptions);
+                    const time = ts.toLocaleTimeString('en-US', timeOptions);
                     const params = new URLSearchParams({ name: result.name || '', date, time });
                     window.location.href = `{% url "signin-success" %}?${params.toString()}`;
                 }, 450);

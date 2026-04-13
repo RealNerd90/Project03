@@ -90,3 +90,24 @@ class GeofenceSetting(models.Model):
     def __str__(self) -> str:
         return f"{self.name} ({self.latitude}, {self.longitude}) - {self.radius}m"
 
+
+class SystemSetting(models.Model):
+    """Global configuration for the entire system."""
+
+    default_language = models.CharField(max_length=255, default="English")
+    timezone = models.CharField(max_length=255, default="Asia/Kolkata")
+    maintenance_mode = models.BooleanField(default=False)
+    retention_days = models.IntegerField(default=90)
+    admin_email = models.EmailField(default="admin@gmail.com")
+    reminder_interval = models.CharField(max_length=255, default="Daily Reminders")
+    reminder_time = models.TimeField(default="08:30")
+    enable_reminder_sound = models.BooleanField(default=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "System Setting"
+        verbose_name_plural = "System Settings"
+
+    def __str__(self) -> str:
+        return f"System Config ({self.system_name})"
+
