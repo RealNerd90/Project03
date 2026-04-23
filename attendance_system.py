@@ -14,14 +14,7 @@ from PIL import Image, ImageDraw, ImageFont # type: ignore
 
 import re
 import urllib.request
-if sys.platform == "win32":
-    try:
-        from winrt.windows.devices.geolocation import Geolocator, PositionStatus, GeolocationAccessStatus
-        from winrt.windows.foundation import IAsyncOperation
-    except ImportError:
-        print("Could not import Geolocation API. Location check may not work.")
-        Geolocator = None
-
+# Removed winrt imports as they are incompatible with Ubuntu
 # ---------------------------------------------------------------------------
 # Location-based attendance (admin-set radius)
 # ---------------------------------------------------------------------------
@@ -95,72 +88,23 @@ def _haversine_meters(lat1, lon1, lat2, lon2):
     return R * c
 
 
-async def _get_current_location():
-    """
-    Get current location using Windows Geolocation API.
-    Returns (lat, lon) or (None, None) on failure, with IP fallback.
-    """
-    if sys.platform == "win32" and Geolocator is not None:
-        try:
-            access_status = await Geolocator.request_access_async()
-            if access_status == GeolocationAccessStatus.ALLOWED:
-                geolocator = Geolocator()
-                # print("Getting current position via GPS... (may take a moment)")
-                position = await geolocator.get_geoposition_async()
-                lat = position.coordinate.latitude
-                lon = position.coordinate.longitude
-                print(f"  -> GPS Location: Lat={lat:.6f}, Lon={lon:.6f} (Accuracy: {position.coordinate.accuracy:.0f}m)")
-                return (float(lat), float(lon))
-            else:
-                print("Location access denied in Windows settings.")
-        except Exception as e:
-            print(f"Could not get GPS location: {e}")
 
-    # Fallback to IP if GPS fails or not on Windows
-    return await _get_current_location_ip()
-
-async def _get_current_location_ip():
-    """
-    Fallback: Get approximate location via IP address.
-    """
-    print("Getting approximate location via IP...")
-    try:
-        # Use ip-api.com (free for non-commercial use, ~45 requests/min)
-        # In a real production app, use a more robust or paid service.
-        url = "http://ip-api.com/json/"
-        with urllib.request.urlopen(url, timeout=5) as response:
-            data = json.loads(response.read().decode())
-            if data.get("status") == "success":
-                lat = float(data.get("lat"))
-                lon = float(data.get("lon"))
-                print(f"  -> IP Location: Lat={lat:.6f}, Lon={lon:.6f} ({data.get('city')}, {data.get('country')})")
-                return (lat, lon)
-            else:
-                print(f"IP Geolocation API error: {data.get('message')}")
-    except Exception as e:
-        print(f"Could not get IP-based location: {e}")
-    return (None, None)
-
-async def check_location_allowed():
+async def check_location_allowed(lat: float | None = None, lon: float | None = None):
     """
     If location-based attendance is enabled, check if current device is within
     admin-set radius. Returns (allowed: bool, message: str, lat: float|None, lon: float|None).
     """
     cfg = await _load_location_config()
     if not cfg["enabled"]:
-        res_cfg: Any = await _get_current_location() # type: ignore
-        lat_cfg, lon_cfg = cast(Any, (res_cfg if res_cfg is not None else (None, None))) # type: ignore
-        return True, "Location check disabled.", lat_cfg, lon_cfg
+        return True, "Location check disabled.", lat, lon
 
-    res: Any = await _get_current_location() # type: ignore
-    lat, lon = cast(Any, (res if res is not None else (None, None))) # type: ignore
     if lat is None or lon is None:
-        return False, "Could not get current location. Check internet or try again.", None, None
+        return False, "Could not get current location from browser. Please enable location permissions.", None, None
+
     dist = _haversine_meters(float(lat), float(lon), float(cfg["center_lat"]), float(cfg["center_lon"])) # type: ignore
     if dist <= float(cfg["radius_meters"]):
         return True, f"Within range ({dist:.0f} m).", lat, lon
-    return False, f"Outside range ({dist:.0f} m).", lat, lon
-    return False, f"Outside allowed radius ({dist:.0f} m > {cfg['radius_meters']} m)."
+    return False, f"Outside allowed radius ({dist:.0f} m).", lat, lon
 
 class AttendanceSystem:
     mtcnn: Any

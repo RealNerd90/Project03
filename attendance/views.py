@@ -1457,7 +1457,16 @@ def attendance_checkin_scan(request: HttpRequest) -> JsonResponse:
         )
 
     try:
-        allowed, msg, lat, lon = asyncio.run(check_location_allowed())
+        payload = json.loads(request.body.decode("utf-8") or "{}")
+        lat = payload.get("lat")
+        lon = payload.get("lon")
+        if lat is not None:
+            lat = float(lat)
+        if lon is not None:
+            lon = float(lon)
+        allowed, msg, lat, lon = asyncio.run(check_location_allowed(lat, lon))
+    except (ValueError, TypeError):
+        return JsonResponse({"success": False, "message": "Invalid coordinates provided."}, status=400)
     except Exception as exc:
         return JsonResponse({"success": False, "message": f"Location check failed: {exc}"}, status=500)
 
@@ -1519,7 +1528,16 @@ def attendance_checkout_scan(request: HttpRequest) -> JsonResponse:
     now = timezone.localtime(timezone.now())
 
     try:
-        allowed, msg, lat, lon = asyncio.run(check_location_allowed())
+        payload = json.loads(request.body.decode("utf-8") or "{}")
+        lat = payload.get("lat")
+        lon = payload.get("lon")
+        if lat is not None:
+            lat = float(lat)
+        if lon is not None:
+            lon = float(lon)
+        allowed, msg, lat, lon = asyncio.run(check_location_allowed(lat, lon))
+    except (ValueError, TypeError):
+        return JsonResponse({"success": False, "message": "Invalid coordinates provided."}, status=400)
     except Exception as exc:
         return JsonResponse({"success": False, "message": f"Location check failed: {exc}"}, status=500)
 

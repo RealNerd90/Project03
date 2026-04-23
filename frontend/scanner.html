@@ -311,6 +311,20 @@
             }
         }
 
+        function getCurrentLocation() {
+            return new Promise((resolve) => {
+                if (!navigator.geolocation) {
+                    resolve({ lat: null, lon: null });
+                } else {
+                    navigator.geolocation.getCurrentPosition(
+                        (pos) => resolve({ lat: pos.coords.latitude, lon: pos.coords.longitude }),
+                        (err) => resolve({ lat: null, lon: null }),
+                        { enableHighAccuracy: true, timeout: 5000 }
+                    );
+                }
+            });
+        }
+
         function getCookie(name) {
             const value = `; ${document.cookie}`;
             const parts = value.split(`; ${name}=`);
@@ -386,6 +400,9 @@
             if (scanInProgress) return;
             scanInProgress = true;
 
+            setStatus('Fetching secure location...', 'info');
+            const loc = await getCurrentLocation();
+
             const canvas = document.createElement('canvas');
             canvas.width = video.videoWidth;
             canvas.height = video.videoHeight;
@@ -401,7 +418,7 @@
                         'Content-Type': 'application/json',
                         'X-CSRFToken': getCookie('csrftoken'),
                     },
-                    body: JSON.stringify({ image: dataUrl }),
+                    body: JSON.stringify({ image: dataUrl, lat: loc.lat, lon: loc.lon }),
                 });
 
                 const result = await response.json();
