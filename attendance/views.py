@@ -566,6 +566,41 @@ def admin_system_settings(request: HttpRequest) -> HttpResponse:
     return render(request, "admin_system_settings.html", context)
 
 
+def admin_change_password(request: HttpRequest) -> HttpResponse:
+    """Handle admin password change."""
+    if not request.session.get("is_admin"):
+        return redirect("manual-login")
+
+    if request.method == "POST":
+        current_password = request.POST.get("current_password", "")
+        new_password = request.POST.get("new_password", "")
+        confirm_password = request.POST.get("confirm_password", "")
+
+        admin_user = AdminAccount.objects.first()
+        if not admin_user:
+            messages.error(request, "No admin account found. Please contact support.")
+            return redirect("admin-change-password")
+        
+        if not admin_user.check_password(current_password):
+            messages.error(request, "Current password is incorrect.")
+            return redirect("admin-change-password")
+            
+        if new_password != confirm_password:
+            messages.error(request, "New passwords do not match.")
+            return redirect("admin-change-password")
+
+        if len(new_password) < 12:
+            messages.error(request, "Password must be at least 12 characters long.")
+            return redirect("admin-change-password")
+
+        admin_user.set_password(new_password)
+        admin_user.save()
+        messages.success(request, "Password has been successfully updated.")
+        return redirect("admin-system-settings")
+
+    return render(request, "admin_change_password.html")
+
+
 def analytics(request: HttpRequest) -> HttpResponse:
     """Render the analytics page with real-time statistics and trends."""
     display_name = _normalize_display_name(request.session.get("display_name"))

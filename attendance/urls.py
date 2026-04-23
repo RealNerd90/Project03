@@ -10,6 +10,7 @@ urlpatterns = [
     path("admin-dashboard/users/", views.admin_user_management, name="admin-user-management"),
     path("admin-dashboard/enroll/", views.admin_enroll_user, name="admin-enroll-user"),
     path("admin-dashboard/settings/", views.admin_system_settings, name="admin-system-settings"),
+    path("admin-dashboard/settings/password/", views.admin_change_password, name="admin-change-password"),
     path("analytics/", views.analytics, name="analytics"),
     path("profile/", views.profile_view, name="profile"),
     path("profile/edit/", views.profile_edit_view, name="profile-edit"),
