@@ -23,61 +23,77 @@
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js" crossorigin="anonymous"></script>
 </head>
 
-<body class="bg-gray-light no-scroll">
-    <nav class="navbar dashboard-navbar navbar-border flex-between">
-        <div class="logo">
-            <i class="ph-fill ph-check-square-offset text-primary"></i>
-            <span>AttendancePro</span>
-        </div>
+<body class="bg-gray-light cyan-scanner-body">
+    <style>
+        .cyan-scanner-body { background: #f4f8fb !important; overflow-x: hidden !important; }
+        .mobile-navbar {
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            padding: 1.25rem 1.5rem;
+            background: #f4f8fb;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        .nav-back-btn {
+            font-size: 1.5rem;
+            color: #1e293b;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0.5rem;
+            margin-left: -0.5rem;
+        }
+        @keyframes spinSlow { 100% { transform: rotate(360deg); } }
+    </style>
+    <!-- Mobile Navbar -->
+    <div class="mobile-navbar">
+        <a href="{% url 'dashboard' %}" class="nav-back-btn">
+            <i class="ph-bold ph-arrow-left"></i>
+        </a>
+    </div>
 
-        <div class="nav-right">
-            <a href="{% url 'settings' %}" class="nav-link">Settings</a>
-            <button class="icon-btn-rounded mx-2">
-                <i class="ph-fill ph-bell"></i>
-            </button>
-            <div class="profile-avatar">
-                {% if profile_photo_url %}
-                <img src="{{ profile_photo_url }}" alt="Profile" />
-                {% else %}
-                <img src="{% static 'default-avatar.png' %}" alt="Profile" class="default-avatar-img" />
-                {% endif %}
-            </div>
-        </div>
-    </nav>
-
-    <main class="scanner-page">
-        <div class="scanner-card">
-            <header class="scanner-header">
-                <h1 class="scanner-title" id="scannerTitle">Face Recognition Check-In</h1>
-                <p class="scanner-subtitle" id="scannerSubtitle">Position your face within the frame for secure
-                    biometric verification.</p>
+    <main class="scanner-page" style="padding: 0 1rem 120px 1rem; width: 100vw; max-width: 100%; box-sizing: border-box; overflow-x: hidden;">
+        <div class="scanner-card" style="background: white; border-radius: 36px; padding: 2rem 1rem; text-align: center; box-shadow: 0 10px 40px rgba(0,0,0,0.03); width: 100%; box-sizing: border-box;">
+            <header class="scanner-header" style="margin-bottom: 2rem;">
+                <h1 class="scanner-title" id="scannerTitle" style="font-size: 1.5rem; font-weight: 900; color: #0f172a; margin-bottom: 0.5rem; line-height: 1.2;">Face Recognition Check-In</h1>
+                <p class="scanner-subtitle" id="scannerSubtitle" style="font-size: 0.9rem; color: #64748b; font-weight: 500; margin: 0 auto; max-width: 100%; line-height: 1.4;">Position your face within the frame for secure biometric verification.</p>
             </header>
 
-            <section class="scanner-center">
-                <div class="scanner-circle-container">
-                    <div class="scanner-ring-outer"></div>
-                    <div class="scanner-feed-circle">
-                        <video id="scannerVideo" autoplay playsinline muted></video>
-                        <canvas id="scannerOverlay" class="scanner-overlay" aria-hidden="true"></canvas>
-
+            <section class="scanner-center" style="display: flex; flex-direction: column; align-items: center; width: 100%;">
+                <div class="scanner-circle-container" style="position: relative; width: 100%; max-width: 260px; aspect-ratio: 1 / 1; margin: 0 auto 2.5rem auto;">
+                    <!-- Dashed border styling mimicking image -->
+                    <div class="scanner-ring-outer" style="position: absolute; inset: 0; border: 3px dashed #93c5fd; border-radius: 50%; opacity: 0.6; animation: spinSlow 30s linear infinite;"></div>
+                    <div class="scanner-feed-circle" style="position: absolute; top: 15px; left: 15px; right: 15px; bottom: 15px; border-radius: 50%; overflow: hidden; background: #1e293b; box-shadow: inset 0 0 30px rgba(0,0,0,0.5); z-index: 5;">
+                        <video id="scannerVideo" autoplay playsinline muted style="width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1);"></video>
+                        <canvas id="scannerOverlay" class="scanner-overlay" aria-hidden="true" style="position: absolute; top: 0; left: 0; transform: scaleX(-1); width: 100%; height: 100%;"></canvas>
                     </div>
                 </div>
 
-                <div class="scanner-status" id="scannerStatus">
-                    <i class="ph-fill ph-video-camera animation-pulse"></i>
-                    <span id="scannerStatusText">Scanning... Please look directly into the camera</span>
+                <div class="scanner-status" id="scannerStatus" style="background: #eef2ff; color: #2563eb; padding: 0.9rem 1rem; border-radius: 100px; display: flex; align-items: center; justify-content: center; gap: 0.5rem; font-weight: 700; font-size: 0.8rem; margin-bottom: 2rem; width: 100%; box-sizing: border-box; text-align: center;">
+                    <i class="ph-bold ph-video-camera animation-pulse" style="font-size: 1.1rem; flex-shrink: 0;"></i>
+                    <span id="scannerStatusText" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Scanning... Please look into the camera</span>
                 </div>
 
-                <div class="scanner-actions">
-                    <button id="scannerCancel" class="btn btn-outline btn-md">
+                <div class="scanner-actions" style="display: flex; gap: 0.75rem; width: 100%; justify-content: center; margin-bottom: 3rem; box-sizing: border-box;">
+                    <button id="scannerCancel" class="btn" style="background: #e2e8f0; color: #0f172a; border-radius: 14px; padding: 0.8rem 0; font-weight: 700; border: none; font-size: 0.95rem; flex: 1; display: flex; align-items: center; justify-content: center; gap: 0.4rem;">
                         <i class="ph-bold ph-x"></i> Cancel
                     </button>
-                    <button id="scannerRetry" class="btn btn-primary btn-md">
+                    <button id="scannerRetry" class="btn" style="background: #1a73e8; color: white; border-radius: 14px; padding: 0.8rem 0; font-weight: 700; border: none; font-size: 0.95rem; flex: 1; display: flex; align-items: center; justify-content: center; gap: 0.4rem; box-shadow: 0 8px 20px rgba(26, 115, 232, 0.3);">
                         <i class="ph-bold ph-arrows-clockwise"></i> Retry
                     </button>
                 </div>
-            </section>
 
+                <div class="secure-footer" style="color: #94a3b8; font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 800; text-align: center; border-top: 1px solid #f1f5f9; padding-top: 1.5rem; width: 100%;">
+                    <div style="display: flex; align-items: center; justify-content: center; gap: 0.4rem; margin-bottom: 0.8rem;">
+                        <i class="ph-bold ph-lock-key" style="font-size: 0.85rem;"></i> SECURE BIOMETRIC DATA ENCRYPTED
+                    </div>
+                    <div style="text-transform: none; font-weight: 500; font-size: 0.6rem;">
+                        &copy; 2024 Attendance Portal. All rights reserved.
+                    </div>
+                </div>
+            </section>
         </div>
     </main>
     
@@ -502,6 +518,93 @@
         window.addEventListener('resize', updateOverlaySize);
         startCamera().then(beginScan);
     </script>
+
+    <!-- Custom Mobile Bottom Navigation Bar -->
+    <nav class="mobile-bottom-nav">
+        <style>
+            .mobile-bottom-nav {
+                display: none;
+            }
+            @media (max-width: 1024px) {
+                .mobile-bottom-nav {
+                    display: flex;
+                    position: fixed;
+                    bottom: 0;
+                    left: 0;
+                    right: 0;
+                    background: #eef2f6;
+                    justify-content: space-around;
+                    align-items: center;
+                    padding: 0.7rem 0.5rem 0.5rem 0.5rem;
+                    box-shadow: 0 -4px 30px rgba(0,0,0,0.03);
+                    border-top-left-radius: 20px;
+                    border-top-right-radius: 20px;
+                    z-index: 1000;
+                    border: 1px solid #f8fafc;
+                }
+                .mobile-nav-item {
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    justify-content: center;
+                    text-decoration: none;
+                    flex: 1;
+                }
+                .mobile-nav-inner {
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    justify-content: center;
+                    padding: 0.4rem 1rem;
+                    border-radius: 16px;
+                    transition: all 0.2s ease;
+                }
+                .mobile-nav-item.active .mobile-nav-inner {
+                    background: #f0fdfa; /* Extremely faint cyan background */
+                }
+                .mobile-nav-icon {
+                    font-size: 1.25rem;
+                    color: #94a3b8;
+                    margin-bottom: 0.1rem;
+                }
+                .mobile-nav-label {
+                    font-size: 0.6rem;
+                    font-weight: 800;
+                    color: #94a3b8;
+                    text-transform: uppercase;
+                    letter-spacing: 0.05em;
+                }
+                .mobile-nav-item.active .mobile-nav-icon,
+                .mobile-nav-item.active .mobile-nav-label {
+                    color: #00bcd4; /* Dark Cyan matching standard */
+                }
+
+                /* Ensure bottom content doesn't get covered by the navbar margin */
+                body {
+                    padding-bottom: 90px !important;
+                }
+            }
+        </style>
+        
+        <a href="{% url 'dashboard' %}" class="mobile-nav-item active">
+            <div class="mobile-nav-inner">
+                <i class="ph-fill ph-house mobile-nav-icon"></i>
+                <span class="mobile-nav-label">Home</span>
+            </div>
+        </a>
+        <a href="{% url 'analytics' %}" class="mobile-nav-item">
+            <div class="mobile-nav-inner">
+                <i class="ph-fill ph-chart-line-up mobile-nav-icon"></i>
+                <span class="mobile-nav-label">Analytics</span>
+            </div>
+        </a>
+        <a href="{% url 'settings' %}" class="mobile-nav-item">
+            <div class="mobile-nav-inner">
+                <i class="ph-fill ph-gear mobile-nav-icon"></i>
+                <span class="mobile-nav-label">Settings</span>
+            </div>
+        </a>
+    </nav>
 </body>
 
 </html>

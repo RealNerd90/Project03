@@ -15,6 +15,75 @@
     <script src="{% static 'theme.js' %}" defer></script>
     <!-- Phosphor Icons -->
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <!-- Mobile Dashboard Overrides -->
+    <style>
+        @media (max-width: 600px) {
+            /* Keep Navbar on one single line */
+            .dashboard-navbar {
+                flex-direction: row !important;
+                justify-content: space-between !important;
+                padding: 1.25rem 1.25rem !important; /* Increased padding */
+                flex-wrap: nowrap !important;
+            }
+            
+            /* Hide desktop links completely on mobile to prevent wrapping */
+            .dashboard-navbar .nav-links-center {
+                display: none !important;
+            }
+
+            /* Increase Logo sizing perfectly to fit */
+            .dashboard-navbar .logo {
+                font-size: 1.3rem !important;
+                gap: 0.5rem !important;
+                white-space: nowrap !important;
+                overflow: hidden !important;
+            }
+            .dashboard-navbar .logo i {
+                font-size: 1.5rem !important;
+            }
+            
+            /* Squeeze the right action icons */
+            .dashboard-navbar .nav-right {
+                display: flex !important;
+                align-items: center !important;
+                gap: 0.75rem !important;
+                flex-shrink: 0 !important;
+            }
+            
+            /* Increase Bell and Avatar dimensions */
+            .dashboard-navbar .icon-btn-rounded {
+                width: 38px !important;
+                height: 38px !important;
+                font-size: 1.3rem !important;
+                margin: 0 !important;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+            .dashboard-navbar .profile-avatar {
+                width: 38px !important;
+                height: 38px !important;
+            }
+
+            /* Fix entire layout from pushing to the right bounding */
+            body, html {
+                overflow-x: hidden !important;
+            }
+            .dashboard-wrapper {
+                width: 100vw !important;
+                overflow-x: hidden !important;
+                box-sizing: border-box !important;
+            }
+            .container {
+                width: 100% !important;
+                max-width: 100% !important;
+                padding-left: 1rem !important;
+                padding-right: 1rem !important;
+                box-sizing: border-box !important;
+                overflow-x: hidden !important;
+            }
+        }
+    </style>
 </head>
 
 <body class="bg-gray-light">
@@ -108,98 +177,336 @@
     <main class="dashboard-wrapper">
         <div class="container dashboard-grid">
 
-            <!-- Left Column: Main Actions -->
+            <!-- Left Column: Main Actions (Cyan Theme Overhaul) -->
             <div class="col-main">
+                <style>
+                    body { background: #eef2f6 !important; }
+                    .dashboard-navbar {
+                        background: #eef2f6 !important;
+                        border-bottom: none !important;
+                        padding-top: 1rem !important;
+                    }
+                    /* Revert Logo to Original Blue */
+                    .dashboard-navbar .logo span {
+                        color: #0A7DFF !important;
+                        font-weight: 900 !important;
+                        letter-spacing: -0.5px;
+                    }
+                    .dashboard-navbar .logo i {
+                        color: #0A7DFF !important;
+                        background: transparent !important;
+                        border-radius: 0 !important;
+                        padding: 0 !important;
+                        box-shadow: none !important;
+                    }
+                    .nav-right .icon-btn-rounded {
+                        color: #64748b !important;
+                        background: transparent !important;
+                        box-shadow: none !important;
+                        border: none !important;
+                    }
+                    
+                    /* Welcome */
+                    .cyan-welcome { margin-bottom: 1.25rem; }
+                    .cyan-welcome h1 {
+                        font-size: 2.1rem;
+                        font-weight: 800;
+                        color: #1e293b;
+                        margin-bottom: 0.2rem;
+                        line-height: 1.1;
+                    }
+                    .cyan-welcome p {
+                        font-size: 1.15rem;
+                        color: #64748b;
+                        font-weight: 500;
+                    }
 
-                <div class="welcome-header">
-                    <h1>Welcome back, {{ display_name }}</h1>
-                    <p>It's a productive Monday! Check in to start your session.</p>
+                    /* Clock + Buttons Card */
+                    .cyan-card {
+                        background: white;
+                        border-radius: 36px;
+                        padding: 1.75rem 1.25rem;
+                        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.03);
+                        text-align: center;
+                        margin-bottom: 1.25rem;
+                    }
+                    .cyan-clock-label {
+                        font-size: 0.7rem;
+                        font-weight: 800;
+                        color: #94a3b8;
+                        letter-spacing: 0.15em;
+                        text-transform: uppercase;
+                        margin-bottom: 1.25rem;
+                    }
+                    .cyan-time-row {
+                        display: flex;
+                        justify-content: center;
+                        align-items: flex-start;
+                        gap: 0.5rem;
+                        margin-bottom: 1.25rem;
+                    }
+                    .cyan-time-unit {
+                        display: flex;
+                        flex-direction: column;
+                        align-items: center;
+                    }
+                    .cyan-time-num {
+                        font-size: 3rem;
+                        font-weight: 900;
+                        color: #1e293b;
+                        line-height: 1;
+                        letter-spacing: -1px;
+                    }
+                    .cyan-time-num.blue { color: #008080; } /* Dark cyan */
+                    .cyan-time-sub {
+                        font-size: 0.65rem;
+                        font-weight: 700;
+                        color: #94a3b8;
+                        letter-spacing: 0.05em;
+                        margin-top: 0.5rem;
+                    }
+                    .cyan-time-colon {
+                        font-size: 1.5rem;
+                        font-weight: 700;
+                        color: #cbd5e1;
+                        margin-top: 0.7rem;
+                    }
+                    .cyan-clock-date {
+                        font-size: 0.9rem;
+                        font-weight: 600;
+                        color: #64748b;
+                        margin-bottom: 1.5rem;
+                    }
+                    
+                    /* Cyan Action Buttons */
+                    .cyan-buttons-row {
+                        display: flex;
+                        gap: 1rem;
+                        justify-content: center;
+                    }
+                    .cyan-btn {
+                        flex: 1;
+                        background: #00f0ff;
+                        color: #002d2d;
+                        font-weight: 800;
+                        font-size: 1.05rem;
+                        border-radius: 20px;
+                        padding: 1.1rem 0;
+                        border: none;
+                        cursor: pointer;
+                        box-shadow: 0 4px 15px rgba(0, 240, 255, 0.4);
+                        transition: transform 0.2s;
+                        text-align: center;
+                        text-decoration: none;
+                    }
+                    .cyan-btn:hover { transform: scale(0.97); }
+                    .cyan-btn.disabled {
+                        background: #f1f5f9;
+                        color: #94a3b8;
+                        box-shadow: none;
+                        pointer-events: none;
+                    }
+
+                    /* 2 Status Mini Cards */
+                    .cyan-status-grid {
+                        display: grid;
+                        grid-template-columns: 1fr 1fr;
+                        gap: 1rem;
+                        margin-bottom: 1.25rem;
+                    }
+                    .cyan-status-card {
+                        background: white;
+                        border-radius: 24px;
+                        padding: 1.25rem;
+                        box-shadow: 0 4px 20px rgba(0,0,0,0.02);
+                        display: flex;
+                        flex-direction: column;
+                    }
+                    .cyan-status-icon-wrap {
+                        width: 32px;
+                        height: 32px;
+                        border-radius: 50%;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        margin-bottom: 1rem;
+                    }
+                    .cyan-status-icon-wrap.green { background: #e0fbea; color: #00b368; }
+                    .cyan-status-icon-wrap.orange { background: #fffcf0; color: #f59e0b; }
+                    
+                    .cyan-status-label {
+                        font-size: 0.7rem;
+                        font-weight: 700;
+                        color: #64748b;
+                        margin-bottom: 0.2rem;
+                    }
+                    .cyan-status-val {
+                        font-size: 1.15rem;
+                        font-weight: 800;
+                        color: #1e293b;
+                    }
+
+                    /* Recent Logs List */
+                    .cyan-logs-header {
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: center;
+                        margin-bottom: 1rem;
+                    }
+                    .cyan-logs-title {
+                        font-size: 1.15rem;
+                        font-weight: 900;
+                        color: #1e293b;
+                    }
+                    .cyan-logs-view-all {
+                        font-size: 0.7rem;
+                        font-weight: 800;
+                        color: #008080;
+                        letter-spacing: 0.05em;
+                        text-transform: uppercase;
+                    }
+                    .cyan-log-item {
+                        background: white;
+                        border-radius: 16px;
+                        padding: 1rem 1.15rem;
+                        display: flex;
+                        align-items: center;
+                        margin-bottom: 0.75rem;
+                        box-shadow: 0 2px 10px rgba(0,0,0,0.015);
+                        border: 1px solid #f8fafc;
+                    }
+                    .cyan-log-icon {
+                        width: 42px;
+                        height: 42px;
+                        border-radius: 50%;
+                        background: #e8fbff;
+                        color: #00bcd4;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        font-size: 1.25rem;
+                        margin-right: 1.25rem;
+                        flex-shrink: 0;
+                    }
+                    .cyan-log-icon.out { background: #f1f5f9; color: #94a3b8; }
+                    .cyan-log-meta { flex-grow: 1; }
+                    .cyan-log-kind {
+                        font-weight: 800;
+                        color: #1e293b;
+                        font-size: 0.95rem;
+                        margin-bottom: 0.15rem;
+                    }
+                    .cyan-log-time {
+                        font-size: 0.8rem;
+                        color: #64748b;
+                        font-weight: 500;
+                    }
+                    .cyan-log-tag {
+                        background: #e0fbea;
+                        color: #00b368;
+                        font-size: 0.65rem;
+                        font-weight: 900;
+                        padding: 0.25rem 0.5rem;
+                        border-radius: 12px;
+                        text-transform: uppercase;
+                    }
+                    .cyan-log-tag.sys { background: #f1f5f9; color: #64748b; }
+
+                    /* Fix Massive Layout Container Gaps */
+                    @media (max-width: 1024px) {
+                        .dashboard-grid { gap: 1rem !important; }
+                        .col-main { margin-bottom: 0 !important; padding-bottom: 0 !important; }
+                        .col-sidebar { margin-top: 0 !important; padding-top: 0 !important; }
+                    }
+                </style>
+
+                <!-- Welcome Section -->
+                <div class="cyan-welcome">
+                    <h1>Good Morning</h1>
+                    <p>{{ display_name }}</p>
                 </div>
 
-                <!-- Clock Card -->
-                <div class="card time-card">
-                    <p class="section-label-light">CURRENT LOCAL TIME</p>
-
-                    <div class="time-display-container">
-                        <div class="time-block-group">
-                            <div class="time-block blue-light-bg" id="clock-hours">09</div>
-                            <span class="time-label">HOURS</span>
+                <!-- Combined Clock & Buttons Card -->
+                <div class="cyan-card">
+                    <div class="cyan-clock-label">CURRENT LOCAL TIME</div>
+                    <div class="cyan-time-row">
+                        <div class="cyan-time-unit">
+                            <div class="cyan-time-num" id="clock-hours">00</div>
+                            <div class="cyan-time-sub">HOURS</div>
                         </div>
-                        <span class="time-colon">:</span>
-                        <div class="time-block-group">
-                            <div class="time-block gray-light-bg" id="clock-minutes">41</div>
-                            <span class="time-label">MINUTES</span>
+                        <div class="cyan-time-colon">:</div>
+                        <div class="cyan-time-unit">
+                            <div class="cyan-time-num" id="clock-minutes">00</div>
+                            <div class="cyan-time-sub">MINUTES</div>
                         </div>
-                        <span class="time-colon">:</span>
-                        <div class="time-block-group">
-                            <div class="time-block blue-accent-bg text-primary" id="clock-seconds">05</div>
-                            <span class="time-label">SECONDS</span>
+                        <div class="cyan-time-colon">:</div>
+                        <div class="cyan-time-unit">
+                            <div class="cyan-time-num blue" id="clock-seconds">00</div>
+                            <div class="cyan-time-sub">SECONDS</div>
                         </div>
                     </div>
+                    <div class="cyan-clock-date" id="clock-date">Loading...</div>
 
-                    <p class="date-text" id="clock-date">Monday, October 23rd, 2023</p>
-                </div>
-
-                <!-- Action Buttons Row -->
-                <div class="action-buttons-row">
-                    {% if already_checked_in_today %}
-                    <button type="button" class="btn btn-primary btn-xl flex-1 justify-center gap-2" id="duplicateCheckinBtn">
-                        <i class="ph-bold ph-sign-in"></i> Check In
-                    </button>
-                    {% else %}
-                    <a href="{% url 'scanner' %}?action=checkin" class="btn btn-primary btn-xl flex-1 justify-center gap-2">
-                        <i class="ph-bold ph-sign-in"></i> Check In
-                    </a>
-                    {% endif %}
-                    {% if can_checkout %}
-                    <a href="{% url 'scanner' %}?action=checkout" class="btn btn-outline btn-xl flex-1 justify-center gap-2">
-                        <i class="ph-bold ph-sign-out"></i> Check Out
-                    </a>
-                    {% else %}
-                    <button type="button" class="btn btn-outline btn-xl flex-1 justify-center gap-2" title="Check in first to enable checkout" disabled>
-                        <i class="ph-bold ph-sign-out"></i> Check Out
-                    </button>
-                    {% endif %}
-                </div>
-
-                <!-- Recent Activity Card -->
-                <div class="card mt-4">
-                    <div class="card-header flex-between">
-                        <h2 class="card-title">Recent Activity</h2>
-                        <a href="{% url 'analytics' %}" class="link-primary text-sm font-medium">View All</a>
-                    </div>
-
-                    <div class="activity-list">
-                        {% for item in recent_activity %}
-                        <div class="activity-item py-4">
-                            <div class="activity-icon {% if item.kind == 'checkin' %}bg-green-light text-green{% else %}bg-red-light text-red{% endif %}">
-                                {% if item.kind == 'checkin' %}
-                                <i class="ph-bold ph-sign-in"></i>
-                                {% else %}
-                                <i class="ph-bold ph-sign-out"></i>
-                                {% endif %}
-                            </div>
-                            <div class="activity-details flex-1">
-                                <p class="activity-title">{{ item.title }}</p>
-                                <p class="activity-subtitle">{{ item.date_label }}</p>
-                            </div>
-                            <div class="activity-time text-right">
-                                <p class="activity-title">{{ item.time_label }}</p>
-                                <p class="activity-subtitle">{{ item.meta }}</p>
-                            </div>
-                        </div>
-                        {% if not forloop.last %}
-                        <hr class="separator-light">
+                    <div class="cyan-buttons-row">
+                        {% if already_checked_in_today %}
+                            <button type="button" class="cyan-btn" id="duplicateCheckinBtn">Check In</button>
+                        {% else %}
+                            <a href="{% url 'scanner' %}?action=checkin" class="cyan-btn">Check In</a>
                         {% endif %}
-                        {% empty %}
-                        <div class="activity-item py-4">
-                            <div class="activity-details flex-1">
-                                <p class="activity-title">No recent activity</p>
-                                <p class="activity-subtitle">Check in to start tracking attendance.</p>
+
+                        {% if can_checkout %}
+                            <a href="{% url 'scanner' %}?action=checkout" class="cyan-btn">Check Out</a>
+                        {% else %}
+                            <button type="button" class="cyan-btn disabled" disabled>Check Out</button>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Two Status Metrics Layout -->
+                <div class="cyan-status-grid">
+                    <div class="cyan-status-card">
+                        <div class="cyan-status-icon-wrap green">
+                            <i class="ph-bold ph-check-circle"></i>
+                        </div>
+                        <div class="cyan-status-label">Today's Status</div>
+                        <div class="cyan-status-val">On Time</div>
+                    </div>
+                    <div class="cyan-status-card">
+                        <div class="cyan-status-icon-wrap orange">
+                            <i class="ph-bold ph-clock"></i>
+                        </div>
+                        <div class="cyan-status-label">Shift Remaining</div>
+                        <div class="cyan-status-val">04h 22m</div>
+                    </div>
+                </div>
+
+                <!-- Recent Logs List -->
+                <div class="cyan-logs-header">
+                    <div class="cyan-logs-title">Recent Logs</div>
+                    <a href="{% url 'analytics' %}" class="cyan-logs-view-all">VIEW ALL</a>
+                </div>
+                <div style="margin-bottom: 0.5rem;">
+                    {% for item in recent_activity %}
+                        <div class="cyan-log-item">
+                            <div class="cyan-log-icon {% if item.kind != 'checkin' %}out{% endif %}">
+                                <i class="ph-bold {% if item.kind == 'checkin' %}ph-sign-in{% else %}ph-sign-out{% endif %}"></i>
+                            </div>
+                            <div class="cyan-log-meta">
+                                <div class="cyan-log-kind">{% if item.kind == 'checkin' %}Checked In{% else %}Checked Out{% endif %}</div>
+                                <div class="cyan-log-time">{{ item.date_label }}, {{ item.time_label }}</div>
+                            </div>
+                            <div class="cyan-log-tag {% if item.kind != 'checkin' %}sys{% endif %}">
+                                {% if item.kind == 'checkin' %}EARLY{% else %}SYSTEM{% endif %}
                             </div>
                         </div>
-                        {% endfor %}
-                    </div>
+                    {% empty %}
+                        <div class="cyan-log-item" style="padding: 1.5rem; justify-content: center; text-align: center;">
+                            <div class="cyan-log-meta">
+                                <div class="cyan-log-kind">No logs yet</div>
+                                <div class="cyan-log-time">Check in to start tracking.</div>
+                            </div>
+                        </div>
+                    {% endfor %}
                 </div>
 
             </div> <!-- End Left Column -->
@@ -724,6 +1031,94 @@
     </script>
 
     {% include "_footer.html" %}
+
+    <!-- Custom Mobile Bottom Navigation Bar -->
+    <nav class="mobile-bottom-nav">
+        <style>
+            .mobile-bottom-nav {
+                display: none;
+            }
+            @media (max-width: 1024px) {
+                .mobile-bottom-nav {
+                    display: flex;
+                    position: fixed;
+                    bottom: 0;
+                    left: 0;
+                    right: 0;
+                    background: #eef2f6;
+                    justify-content: space-around;
+                    align-items: center;
+                    padding: 0.7rem 0.5rem 0.5rem 0.5rem;
+                    box-shadow: 0 -4px 30px rgba(0,0,0,0.03);
+                    border-top-left-radius: 20px;
+                    border-top-right-radius: 20px;
+                    z-index: 1000;
+                    border: 1px solid #f8fafc;
+                }
+                .mobile-nav-item {
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    justify-content: center;
+                    text-decoration: none;
+                    flex: 1;
+                }
+                .mobile-nav-inner {
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    justify-content: center;
+                    padding: 0.4rem 1rem;
+                    border-radius: 16px;
+                    transition: all 0.2s ease;
+                }
+                .mobile-nav-item.active .mobile-nav-inner {
+                    background: #f0fdfa; /* Extremely faint cyan background */
+                }
+                .mobile-nav-icon {
+                    font-size: 1.25rem;
+                    color: #94a3b8;
+                    margin-bottom: 0.1rem;
+                }
+                .mobile-nav-label {
+                    font-size: 0.6rem;
+                    font-weight: 800;
+                    color: #94a3b8;
+                    text-transform: uppercase;
+                    letter-spacing: 0.05em;
+                }
+                .mobile-nav-item.active .mobile-nav-icon,
+                .mobile-nav-item.active .mobile-nav-label {
+                    color: #00bcd4; /* Dark Cyan matching standard */
+                }
+
+                /* Ensure bottom content doesn't get covered by the navbar margin */
+                body {
+                    padding-bottom: 90px !important;
+                }
+            }
+        </style>
+        
+        <a href="{% url 'dashboard' %}" class="mobile-nav-item active">
+            <div class="mobile-nav-inner">
+                <i class="ph-fill ph-house mobile-nav-icon"></i>
+                <span class="mobile-nav-label">Home</span>
+            </div>
+        </a>
+        <a href="{% url 'analytics' %}" class="mobile-nav-item">
+            <div class="mobile-nav-inner">
+                <i class="ph-fill ph-chart-line-up mobile-nav-icon"></i>
+                <span class="mobile-nav-label">Analytics</span>
+            </div>
+        </a>
+        <a href="{% url 'settings' %}" class="mobile-nav-item">
+            <div class="mobile-nav-inner">
+                <i class="ph-fill ph-gear mobile-nav-icon"></i>
+                <span class="mobile-nav-label">Settings</span>
+            </div>
+        </a>
+    </nav>
+
 </body>
 
 </html>

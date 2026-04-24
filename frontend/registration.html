@@ -21,14 +21,25 @@
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
 </head>
 
-<body class="bg-gray-light no-scroll">
+<body class="bg-gray-light">
     <!-- Navbar (simplified for sign in page) -->
     <nav class="navbar navbar-border">
-        <div class="logo">
+        <!-- Desktop Logo -->
+        <div class="logo desktop-only">
             <i class="ph-fill ph-check-square-offset"></i>
             <span>AttendancePro</span>
         </div>
-        <div class="nav-links">
+
+        <!-- Mobile Navbar -->
+        <div class="mobile-navbar mobile-only">
+            <a href="{% url 'welcome' %}" class="nav-back-btn">
+                <i class="ph-bold ph-caret-left"></i>
+            </a>
+            <span class="mobile-nav-title">Registration</span>
+            <div class="nav-spacer"></div>
+        </div>
+
+        <div class="nav-links desktop-only">
             <a href="{% url 'welcome' %}">Home</a>
             <a href="#">Support</a>
             <a href="#">About</a>
