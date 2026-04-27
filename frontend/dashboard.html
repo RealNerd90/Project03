@@ -82,6 +82,9 @@
                 box-sizing: border-box !important;
                 overflow-x: hidden !important;
             }
+            .signin-footer {
+                display: none !important;
+            }
         }
     </style>
 </head>
@@ -177,336 +180,305 @@
     <main class="dashboard-wrapper">
         <div class="container dashboard-grid">
 
-            <!-- Left Column: Main Actions (Cyan Theme Overhaul) -->
+            <!-- Left Column: Main Actions -->
             <div class="col-main">
+                <!-- Mobile-Only Cyan Theme Transformation -->
                 <style>
-                    body { background: #eef2f6 !important; }
-                    .dashboard-navbar {
-                        background: #eef2f6 !important;
-                        border-bottom: none !important;
-                        padding-top: 1rem !important;
-                    }
-                    /* Revert Logo to Original Blue */
-                    .dashboard-navbar .logo span {
-                        color: #0A7DFF !important;
-                        font-weight: 900 !important;
-                        letter-spacing: -0.5px;
-                    }
-                    .dashboard-navbar .logo i {
-                        color: #0A7DFF !important;
-                        background: transparent !important;
-                        border-radius: 0 !important;
-                        padding: 0 !important;
-                        box-shadow: none !important;
-                    }
-                    .nav-right .icon-btn-rounded {
-                        color: #64748b !important;
-                        background: transparent !important;
-                        box-shadow: none !important;
-                        border: none !important;
-                    }
-                    
-                    /* Welcome */
-                    .cyan-welcome { margin-bottom: 1.25rem; }
-                    .cyan-welcome h1 {
-                        font-size: 2.1rem;
-                        font-weight: 800;
-                        color: #1e293b;
-                        margin-bottom: 0.2rem;
-                        line-height: 1.1;
-                    }
-                    .cyan-welcome p {
-                        font-size: 1.15rem;
-                        color: #64748b;
-                        font-weight: 500;
+                    @media (max-width: 600px) {
+                        body { background: #eef2f6 !important; }
+                        .dashboard-navbar {
+                            background: #eef2f6 !important;
+                            border-bottom: none !important;
+                            padding-top: 1rem !important;
+                        }
+                        
+                        /* Welcome Overrides */
+                        .welcome-header { margin-bottom: 1.25rem !important; }
+                        .welcome-header h1 {
+                            font-size: 2.1rem !important;
+                            font-weight: 800 !important;
+                            color: #1e293b !important;
+                            margin-bottom: 0.2rem !important;
+                        }
+                        .welcome-header p {
+                            font-size: 1.15rem !important;
+                            color: #64748b !important;
+                            font-weight: 500 !important;
+                        }
+
+                        /* Time Card Overrides */
+                        .card.time-card {
+                            background: white !important;
+                            border-radius: 36px !important;
+                            padding: 1.75rem 1.25rem !important;
+                            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.03) !important;
+                            text-align: center !important;
+                            margin-bottom: 1.25rem !important;
+                            border: none !important;
+                        }
+                        .section-label-light {
+                            font-size: 0.7rem !important;
+                            font-weight: 800 !important;
+                            color: #94a3b8 !important;
+                            letter-spacing: 0.15em !important;
+                            margin-bottom: 1.25rem !important;
+                        }
+                        .time-display-container {
+                            justify-content: center !important;
+                            gap: 0.5rem !important;
+                            margin-bottom: 1.25rem !important;
+                        }
+                        .time-block {
+                            background: transparent !important;
+                            font-size: 3rem !important;
+                            font-weight: 900 !important;
+                            color: #1e293b !important;
+                            padding: 0 !important;
+                            min-width: auto !important;
+                        }
+                        .time-block.blue-accent-bg { color: #008080 !important; } /* Dark cyan */
+                        .time-label {
+                            font-size: 0.65rem !important;
+                            font-weight: 700 !important;
+                            color: #94a3b8 !important;
+                            margin-top: 0.5rem !important;
+                        }
+                        .time-colon {
+                            color: #cbd5e1 !important;
+                            margin-top: 0.7rem !important;
+                        }
+                        .date-text {
+                            font-size: 0.9rem !important;
+                            font-weight: 600 !important;
+                            color: #64748b !important;
+                        }
+
+                        /* Action Button Overrides */
+                        .action-buttons-row { 
+                            gap: 1rem !important; 
+                            margin-bottom: 2.25rem !important; /* Added gap to Recent Logs */
+                        }
+                        .action-buttons-row .btn {
+                            background: #00f0ff !important;
+                            color: #002d2d !important;
+                            font-weight: 800 !important;
+                            font-size: 1.05rem !important;
+                            border-radius: 20px !important;
+                            padding: 1.1rem 0 !important;
+                            border: none !important;
+                            box-shadow: 0 4px 15px rgba(0, 240, 255, 0.4) !important;
+                        }
+                        .action-buttons-row .btn i { display: none !important; } /* Hide icons for cleaner pill look on mobile */
+                        .action-buttons-row .btn-outline {
+                            /* For checkout if disabled or enabled */
+                            background: #eef2f6 !important; /* Lighter/Transparent feel */
+                            color: #0A7DFF !important;
+                            border: 2px solid #0A7DFF !important; /* Requested Blue Border */
+                            box-shadow: none !important;
+                        }
+                        .action-buttons-row .btn:disabled {
+                            background: #f1f5f9 !important;
+                            color: #94a3b8 !important;
+                            box-shadow: none !important;
+                        }
+
+                        /* Activity List Overrides (Pill boxes) */
+                        .desktop-recent-activity { display: none !important; }
+                        .mobile-only-cyan-logs { display: block !important; }
+
+                        .cyan-logs-header {
+                            display: flex !important;
+                            justify-content: space-between !important;
+                            align-items: center !important;
+                            margin-bottom: 1rem !important;
+                        }
+                        .cyan-logs-title {
+                            font-size: 1.15rem !important;
+                            font-weight: 900 !important;
+                            color: #1e293b !important;
+                        }
+                        .cyan-logs-view-all {
+                            font-size: 0.7rem !important;
+                            font-weight: 800 !important;
+                            color: #008080 !important;
+                            letter-spacing: 0.05em !important;
+                            text-transform: uppercase !important;
+                        }
+
+                        .cyan-log-item {
+                            background: white !important;
+                            border-radius: 16px !important;
+                            padding: 1rem 1.15rem !important;
+                            display: flex !important;
+                            align-items: center !important;
+                            margin-bottom: 0.75rem !important;
+                            box-shadow: 0 2px 10px rgba(0,0,0,0.015) !important;
+                            border: 1px solid #f8fafc !important;
+                        }
+                        .cyan-log-icon {
+                            width: 42px !important;
+                            height: 42px !important;
+                            border-radius: 50% !important;
+                            background: #e8fbff !important;
+                            color: #00bcd4 !important;
+                            display: flex !important;
+                            align-items: center !important;
+                            justify-content: center !important;
+                            font-size: 1.25rem !important;
+                            margin-right: 1.25rem !important;
+                            flex-shrink: 0 !important;
+                        }
+                        .cyan-log-icon.out { background: #f1f5f9 !important; color: #94a3b8 !important; }
+                        .cyan-log-meta { flex-grow: 1 !important; }
+                        .cyan-log-kind {
+                            font-weight: 800 !important;
+                            color: #1e293b !important;
+                            font-size: 0.95rem !important;
+                            margin-bottom: 0.15rem !important;
+                        }
+                        .cyan-log-time {
+                            font-size: 0.8rem !important;
+                            color: #64748b !important;
+                            font-weight: 500 !important;
+                        }
+                        .cyan-log-tag {
+                            background: #e0fbea !important; /* Neutral light cyan/greenish background */
+                            color: #00b368 !important;
+                            font-size: 0.75rem !important; /* Slightly larger for time */
+                            font-weight: 900 !important;
+                            padding: 0.4rem 0.75rem !important;
+                            border-radius: 12px !important;
+                            white-space: nowrap !important;
+                        }
+                        .separator-light { display: none !important; }
                     }
 
-                    /* Clock + Buttons Card */
-                    .cyan-card {
-                        background: white;
-                        border-radius: 36px;
-                        padding: 1.75rem 1.25rem;
-                        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.03);
-                        text-align: center;
-                        margin-bottom: 1.25rem;
-                    }
-                    .cyan-clock-label {
-                        font-size: 0.7rem;
-                        font-weight: 800;
-                        color: #94a3b8;
-                        letter-spacing: 0.15em;
-                        text-transform: uppercase;
-                        margin-bottom: 1.25rem;
-                    }
-                    .cyan-time-row {
-                        display: flex;
-                        justify-content: center;
-                        align-items: flex-start;
-                        gap: 0.5rem;
-                        margin-bottom: 1.25rem;
-                    }
-                    .cyan-time-unit {
-                        display: flex;
-                        flex-direction: column;
-                        align-items: center;
-                    }
-                    .cyan-time-num {
-                        font-size: 3rem;
-                        font-weight: 900;
-                        color: #1e293b;
-                        line-height: 1;
-                        letter-spacing: -1px;
-                    }
-                    .cyan-time-num.blue { color: #008080; } /* Dark cyan */
-                    .cyan-time-sub {
-                        font-size: 0.65rem;
-                        font-weight: 700;
-                        color: #94a3b8;
-                        letter-spacing: 0.05em;
-                        margin-top: 0.5rem;
-                    }
-                    .cyan-time-colon {
-                        font-size: 1.5rem;
-                        font-weight: 700;
-                        color: #cbd5e1;
-                        margin-top: 0.7rem;
-                    }
-                    .cyan-clock-date {
-                        font-size: 0.9rem;
-                        font-weight: 600;
-                        color: #64748b;
-                        margin-bottom: 1.5rem;
-                    }
-                    
-                    /* Cyan Action Buttons */
-                    .cyan-buttons-row {
-                        display: flex;
-                        gap: 1rem;
-                        justify-content: center;
-                    }
-                    .cyan-btn {
-                        flex: 1;
-                        background: #00f0ff;
-                        color: #002d2d;
-                        font-weight: 800;
-                        font-size: 1.05rem;
-                        border-radius: 20px;
-                        padding: 1.1rem 0;
-                        border: none;
-                        cursor: pointer;
-                        box-shadow: 0 4px 15px rgba(0, 240, 255, 0.4);
-                        transition: transform 0.2s;
-                        text-align: center;
-                        text-decoration: none;
-                    }
-                    .cyan-btn:hover { transform: scale(0.97); }
-                    .cyan-btn.disabled {
-                        background: #f1f5f9;
-                        color: #94a3b8;
-                        box-shadow: none;
-                        pointer-events: none;
-                    }
-
-                    /* 2 Status Mini Cards */
-                    .cyan-status-grid {
-                        display: grid;
-                        grid-template-columns: 1fr 1fr;
-                        gap: 1rem;
-                        margin-bottom: 1.25rem;
-                    }
-                    .cyan-status-card {
-                        background: white;
-                        border-radius: 24px;
-                        padding: 1.25rem;
-                        box-shadow: 0 4px 20px rgba(0,0,0,0.02);
-                        display: flex;
-                        flex-direction: column;
-                    }
-                    .cyan-status-icon-wrap {
-                        width: 32px;
-                        height: 32px;
-                        border-radius: 50%;
-                        display: flex;
-                        align-items: center;
-                        justify-content: center;
-                        margin-bottom: 1rem;
-                    }
-                    .cyan-status-icon-wrap.green { background: #e0fbea; color: #00b368; }
-                    .cyan-status-icon-wrap.orange { background: #fffcf0; color: #f59e0b; }
-                    
-                    .cyan-status-label {
-                        font-size: 0.7rem;
-                        font-weight: 700;
-                        color: #64748b;
-                        margin-bottom: 0.2rem;
-                    }
-                    .cyan-status-val {
-                        font-size: 1.15rem;
-                        font-weight: 800;
-                        color: #1e293b;
-                    }
-
-                    /* Recent Logs List */
-                    .cyan-logs-header {
-                        display: flex;
-                        justify-content: space-between;
-                        align-items: center;
-                        margin-bottom: 1rem;
-                    }
-                    .cyan-logs-title {
-                        font-size: 1.15rem;
-                        font-weight: 900;
-                        color: #1e293b;
-                    }
-                    .cyan-logs-view-all {
-                        font-size: 0.7rem;
-                        font-weight: 800;
-                        color: #008080;
-                        letter-spacing: 0.05em;
-                        text-transform: uppercase;
-                    }
-                    .cyan-log-item {
-                        background: white;
-                        border-radius: 16px;
-                        padding: 1rem 1.15rem;
-                        display: flex;
-                        align-items: center;
-                        margin-bottom: 0.75rem;
-                        box-shadow: 0 2px 10px rgba(0,0,0,0.015);
-                        border: 1px solid #f8fafc;
-                    }
-                    .cyan-log-icon {
-                        width: 42px;
-                        height: 42px;
-                        border-radius: 50%;
-                        background: #e8fbff;
-                        color: #00bcd4;
-                        display: flex;
-                        align-items: center;
-                        justify-content: center;
-                        font-size: 1.25rem;
-                        margin-right: 1.25rem;
-                        flex-shrink: 0;
-                    }
-                    .cyan-log-icon.out { background: #f1f5f9; color: #94a3b8; }
-                    .cyan-log-meta { flex-grow: 1; }
-                    .cyan-log-kind {
-                        font-weight: 800;
-                        color: #1e293b;
-                        font-size: 0.95rem;
-                        margin-bottom: 0.15rem;
-                    }
-                    .cyan-log-time {
-                        font-size: 0.8rem;
-                        color: #64748b;
-                        font-weight: 500;
-                    }
-                    .cyan-log-tag {
-                        background: #e0fbea;
-                        color: #00b368;
-                        font-size: 0.65rem;
-                        font-weight: 900;
-                        padding: 0.25rem 0.5rem;
-                        border-radius: 12px;
-                        text-transform: uppercase;
-                    }
-                    .cyan-log-tag.sys { background: #f1f5f9; color: #64748b; }
-
-                    /* Fix Massive Layout Container Gaps */
-                    @media (max-width: 1024px) {
-                        .dashboard-grid { gap: 1rem !important; }
-                        .col-main { margin-bottom: 0 !important; padding-bottom: 0 !important; }
-                        .col-sidebar { margin-top: 0 !important; padding-top: 0 !important; }
-                    }
+                    /* Desktop Visibility */
+                    .mobile-only-cyan-logs { display: none; }
                 </style>
 
-                <!-- Welcome Section -->
-                <div class="cyan-welcome">
-                    <h1>Good Morning</h1>
-                    <p>{{ display_name }}</p>
+                <div class="welcome-header">
+                    <h1>Welcome back, {{ display_name }}</h1>
+                    <p>It's a productive Monday! Check in to start your session.</p>
                 </div>
 
-                <!-- Combined Clock & Buttons Card -->
-                <div class="cyan-card">
-                    <div class="cyan-clock-label">CURRENT LOCAL TIME</div>
-                    <div class="cyan-time-row">
-                        <div class="cyan-time-unit">
-                            <div class="cyan-time-num" id="clock-hours">00</div>
-                            <div class="cyan-time-sub">HOURS</div>
+                <!-- Clock Card -->
+                <div class="card time-card">
+                    <p class="section-label-light">CURRENT LOCAL TIME</p>
+
+                    <div class="time-display-container">
+                        <div class="time-block-group">
+                            <div class="time-block blue-light-bg" id="clock-hours">09</div>
+                            <span class="time-label">HOURS</span>
                         </div>
-                        <div class="cyan-time-colon">:</div>
-                        <div class="cyan-time-unit">
-                            <div class="cyan-time-num" id="clock-minutes">00</div>
-                            <div class="cyan-time-sub">MINUTES</div>
+                        <span class="time-colon">:</span>
+                        <div class="time-block-group">
+                            <div class="time-block gray-light-bg" id="clock-minutes">41</div>
+                            <span class="time-label">MINUTES</span>
                         </div>
-                        <div class="cyan-time-colon">:</div>
-                        <div class="cyan-time-unit">
-                            <div class="cyan-time-num blue" id="clock-seconds">00</div>
-                            <div class="cyan-time-sub">SECONDS</div>
+                        <span class="time-colon">:</span>
+                        <div class="time-block-group">
+                            <div class="time-block blue-accent-bg text-primary" id="clock-seconds">05</div>
+                            <span class="time-label">SECONDS</span>
                         </div>
                     </div>
-                    <div class="cyan-clock-date" id="clock-date">Loading...</div>
 
-                    <div class="cyan-buttons-row">
-                        {% if already_checked_in_today %}
-                            <button type="button" class="cyan-btn" id="duplicateCheckinBtn">Check In</button>
-                        {% else %}
-                            <a href="{% url 'scanner' %}?action=checkin" class="cyan-btn">Check In</a>
-                        {% endif %}
+                    <p class="date-text" id="clock-date">Monday, October 23rd, 2023</p>
+                </div>
 
-                        {% if can_checkout %}
-                            <a href="{% url 'scanner' %}?action=checkout" class="cyan-btn">Check Out</a>
-                        {% else %}
-                            <button type="button" class="cyan-btn disabled" disabled>Check Out</button>
-                        {% endif %}
+                <!-- Action Buttons Row -->
+                <div class="action-buttons-row">
+                    {% if already_checked_in_today %}
+                    <button type="button" class="btn btn-primary btn-xl flex-1 justify-center gap-2" id="duplicateCheckinBtn">
+                        <i class="ph-bold ph-sign-in"></i> Check In
+                    </button>
+                    {% else %}
+                    <a href="{% url 'scanner' %}?action=checkin" class="btn btn-primary btn-xl flex-1 justify-center gap-2">
+                        <i class="ph-bold ph-sign-in"></i> Check In
+                    </a>
+                    {% endif %}
+                    {% if can_checkout %}
+                    <a href="{% url 'scanner' %}?action=checkout" class="btn btn-outline btn-xl flex-1 justify-center gap-2">
+                        <i class="ph-bold ph-sign-out"></i> Check Out
+                    </a>
+                    {% else %}
+                    <button type="button" class="btn btn-outline btn-xl flex-1 justify-center gap-2" title="Check in first to enable checkout" disabled>
+                        <i class="ph-bold ph-sign-out"></i> Check Out
+                    </button>
+                    {% endif %}
+                </div>
+
+                <!-- Recent Activity Section (Dual Track) -->
+                <div class="desktop-recent-activity">
+                    <div class="card mt-4">
+                        <div class="card-header flex-between">
+                            <h2 class="card-title">Recent Activity</h2>
+                            <a href="{% url 'analytics' %}" class="link-primary text-sm font-medium">View All</a>
+                        </div>
+
+                        <div class="activity-list">
+                            {% for item in recent_activity %}
+                            <div class="activity-item py-4">
+                                <div class="activity-icon {% if item.kind == 'checkin' %}bg-green-light text-green{% else %}bg-red-light text-red{% endif %}">
+                                    {% if item.kind == 'checkin' %}
+                                    <i class="ph-bold ph-sign-in"></i>
+                                    {% else %}
+                                    <i class="ph-bold ph-sign-out"></i>
+                                    {% endif %}
+                                </div>
+                                <div class="activity-details flex-1">
+                                    <p class="activity-title">{{ item.title }}</p>
+                                    <p class="activity-subtitle">{{ item.date_label }}</p>
+                                </div>
+                                <div class="activity-time text-right">
+                                    <p class="activity-title">{{ item.time_label }}</p>
+                                    <p class="activity-subtitle">{{ item.meta }}</p>
+                                </div>
+                            </div>
+                            {% if not forloop.last %}
+                            <hr class="separator-light">
+                            {% endif %}
+                            {% empty %}
+                            <div class="activity-item py-4">
+                                <div class="activity-details flex-1">
+                                    <p class="activity-title">No recent activity</p>
+                                    <p class="activity-subtitle">Check in to start tracking attendance.</p>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
                     </div>
                 </div>
 
-                <!-- Two Status Metrics Layout -->
-                <div class="cyan-status-grid">
-                    <div class="cyan-status-card">
-                        <div class="cyan-status-icon-wrap green">
-                            <i class="ph-bold ph-check-circle"></i>
-                        </div>
-                        <div class="cyan-status-label">Today's Status</div>
-                        <div class="cyan-status-val">On Time</div>
+                <!-- Mobile Only Cyan Logs (Image 2 Style) -->
+                <div class="mobile-only-cyan-logs">
+                    <div class="cyan-logs-header">
+                        <div class="cyan-logs-title">Recent Logs</div>
+                        <a href="{% url 'analytics' %}" class="cyan-logs-view-all">VIEW ALL</a>
                     </div>
-                    <div class="cyan-status-card">
-                        <div class="cyan-status-icon-wrap orange">
-                            <i class="ph-bold ph-clock"></i>
-                        </div>
-                        <div class="cyan-status-label">Shift Remaining</div>
-                        <div class="cyan-status-val">04h 22m</div>
+                    <div class="cyan-logs-list">
+                        {% for item in recent_activity %}
+                            <div class="cyan-log-item">
+                                <div class="cyan-log-icon {% if item.kind != 'checkin' %}out{% endif %}">
+                                    <i class="ph-bold {% if item.kind == 'checkin' %}ph-sign-in{% else %}ph-sign-out{% endif %}"></i>
+                                </div>
+                                <div class="cyan-log-meta">
+                                    <div class="cyan-log-kind">{% if item.kind == 'checkin' %}Checked In{% else %}Checked Out{% endif %}</div>
+                                    <div class="cyan-log-time">{{ item.date_label }}</div>
+                                </div>
+                                <div class="cyan-log-tag">
+                                    {{ item.time_label }}
+                                </div>
+                            </div>
+                        {% empty %}
+                            <div class="cyan-log-item" style="padding: 1.5rem; justify-content: center; text-align: center;">
+                                <div class="cyan-log-meta">
+                                    <div class="cyan-log-kind">No logs yet</div>
+                                    <div class="cyan-log-time">Check in to start tracking.</div>
+                                </div>
+                            </div>
+                        {% endfor %}
                     </div>
-                </div>
-
-                <!-- Recent Logs List -->
-                <div class="cyan-logs-header">
-                    <div class="cyan-logs-title">Recent Logs</div>
-                    <a href="{% url 'analytics' %}" class="cyan-logs-view-all">VIEW ALL</a>
-                </div>
-                <div style="margin-bottom: 0.5rem;">
-                    {% for item in recent_activity %}
-                        <div class="cyan-log-item">
-                            <div class="cyan-log-icon {% if item.kind != 'checkin' %}out{% endif %}">
-                                <i class="ph-bold {% if item.kind == 'checkin' %}ph-sign-in{% else %}ph-sign-out{% endif %}"></i>
-                            </div>
-                            <div class="cyan-log-meta">
-                                <div class="cyan-log-kind">{% if item.kind == 'checkin' %}Checked In{% else %}Checked Out{% endif %}</div>
-                                <div class="cyan-log-time">{{ item.date_label }}, {{ item.time_label }}</div>
-                            </div>
-                            <div class="cyan-log-tag {% if item.kind != 'checkin' %}sys{% endif %}">
-                                {% if item.kind == 'checkin' %}EARLY{% else %}SYSTEM{% endif %}
-                            </div>
-                        </div>
-                    {% empty %}
-                        <div class="cyan-log-item" style="padding: 1.5rem; justify-content: center; text-align: center;">
-                            <div class="cyan-log-meta">
-                                <div class="cyan-log-kind">No logs yet</div>
-                                <div class="cyan-log-time">Check in to start tracking.</div>
-                            </div>
-                        </div>
-                    {% endfor %}
                 </div>
 
             </div> <!-- End Left Column -->
@@ -1077,13 +1049,13 @@
                 }
                 .mobile-nav-icon {
                     font-size: 1.25rem;
-                    color: #94a3b8;
+                    color: #64748b; /* Darker for better visibility */
                     margin-bottom: 0.1rem;
                 }
                 .mobile-nav-label {
                     font-size: 0.6rem;
                     font-weight: 800;
-                    color: #94a3b8;
+                    color: #64748b; /* Darker for better visibility */
                     text-transform: uppercase;
                     letter-spacing: 0.05em;
                 }
@@ -1094,7 +1066,7 @@
 
                 /* Ensure bottom content doesn't get covered by the navbar margin */
                 body {
-                    padding-bottom: 90px !important;
+                    padding-bottom: 80px !important;
                 }
             }
         </style>
@@ -1118,7 +1090,6 @@
             </div>
         </a>
     </nav>
-
 </body>
 
 </html>

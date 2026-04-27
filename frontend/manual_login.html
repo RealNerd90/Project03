@@ -16,56 +16,230 @@
 
 <body style="background-color: #f6f8fb; min-height: 100vh; display: flex; flex-direction: column;">
     <style>
-    /* Custom styles matching the exact Image 1 design */
-    .custom-login-container {
-        max-width: 380px;
-        margin: 0 auto;
+    /* ---------------------------------------------------
+       GLOBAL & PAGE BASE 
+       --------------------------------------------------- */
+    body {
+        background-color: #f6f8fb;
+        font-family: 'Inter', sans-serif;
+    }
+
+    /* ---------------------------------------------------
+       DESKTOP CARD VIEW (Image 3 Parity)
+       --------------------------------------------------- */
+    .login-container-desktop {
+        width: 100%;
+        max-width: 440px;
+        margin: auto;
+        padding-top: 5vh;
+        padding-bottom: 5vh;
+    }
+    .login-card {
+        background: white;
+        border-radius: 12px;
+        padding: 3rem 2.5rem;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+        display: flex;
+        flex-direction: column;
+    }
+    .login-card .header-title {
+        font-size: 1.75rem;
+        font-weight: 700;
+        color: #0f172a;
+        margin-bottom: 0.5rem;
+        text-align: left;
+    }
+    .login-card .header-subtitle {
+        font-size: 0.95rem;
+        color: #64748b;
+        margin-bottom: 2.25rem;
+        text-align: left;
+    }
+    
+    .desktop-form-group {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        margin-bottom: 1.5rem;
+    }
+    .label-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    .desktop-label {
+        font-size: 0.9rem;
+        font-weight: 500;
+        color: #334155;
+    }
+    .desktop-forgot-link {
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: #0A7DFF;
+        text-decoration: none;
+    }
+    .desktop-input-wrap {
+        position: relative;
+        display: flex;
+        align-items: center;
+        width: 100%;
+        border: 1.5px solid #e2e8f0;
+        border-radius: 8px;
+        background: white;
+        transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .desktop-input-wrap:focus-within {
+        border-color: #0A7DFF;
+        box-shadow: 0 0 0 3px rgba(10, 125, 255, 0.1);
+    }
+    .desktop-input-wrap i:first-child {
+        margin-left: 1rem;
+        color: #94a3b8;
+        font-size: 1.2rem;
+    }
+    .desktop-input {
+        flex-grow: 1;
+        width: 100%;
+        padding: 0.75rem 0.75rem;
+        border: none;
+        outline: none;
+        background: transparent;
+        font-size: 1rem;
+        color: #1e293b;
+    }
+    .desktop-input-wrap .pwd-toggle {
+        margin-right: 0.75rem;
+        background: none;
+        border: none;
+        color: #94a3b8;
+        cursor: pointer;
+        padding: 0;
+        display: flex;
+        font-size: 1.25rem;
+    }
+
+    .desktop-btn-primary {
+        width: 100%;
+        background-color: #0A7DFF;
+        color: white;
+        padding: 0.85rem;
+        border: none;
+        border-radius: 8px;
+        font-size: 1rem;
+        font-weight: 700;
+        cursor: pointer;
+        margin-top: 0.5rem;
+        margin-bottom: 2rem;
+        transition: background-color 0.2s;
+    }
+    .desktop-btn-primary:hover {
+        background-color: #006ae6;
+    }
+
+    .separator-container {
+        display: flex;
+        align-items: center;
+        text-align: center;
+        margin-bottom: 2rem;
+    }
+    .separator-container::before,
+    .separator-container::after {
+        content: "";
+        flex: 1;
+        border-bottom: 1px solid #e2e8f0;
+    }
+    .separator-text {
+        padding: 0 1rem;
+        font-size: 0.75rem;
+        font-weight: 700;
+        color: #94a3b8;
+        letter-spacing: 0.05em;
+    }
+
+    .desktop-btn-outline {
+        width: 100%;
+        background-color: transparent;
+        color: #0A7DFF;
+        padding: 0.85rem;
+        border: 1.5px solid #0A7DFF;
+        border-radius: 8px;
+        font-size: 0.95rem;
+        font-weight: 600;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.6rem;
+        transition: background-color 0.2s;
+    }
+    .desktop-btn-outline:hover {
+        background-color: rgba(10, 125, 255, 0.04);
+    }
+    
+    .desktop-footer {
+        padding: 3rem 0;
+        text-align: center;
+    }
+    .desktop-footer p {
+        font-size: 0.85rem;
+        color: #94a3b8;
+        margin-bottom: 0.5rem;
+    }
+    .footer-links-row {
+        display: flex;
+        justify-content: center;
+        gap: 1.5rem;
+    }
+    .footer-links-row a {
+        font-size: 0.85rem;
+        color: #94a3b8;
+        text-decoration: none;
+    }
+
+    /* ---------------------------------------------------
+       MOBILE VIEW (Preserving Cyan Theme)
+       --------------------------------------------------- */
+    .mobile-custom-container {
         padding: 2.5rem 1.5rem;
         display: flex;
         flex-direction: column;
         align-items: center;
-        flex-grow: 1;
         width: 100%;
+        flex-grow: 1;
     }
-    .login-icon-box {
-        width: 85px;
-        height: 85px;
-        background-color: #00f0ff; /* Vibrant cyan */
-        border-radius: 24px;
+    .mobile-icon-box {
+        width: 75px;
+        height: 75px;
+        background-color: #00f0ff;
+        border-radius: 20px;
         display: flex;
         align-items: center;
         justify-content: center;
         margin-bottom: 1.5rem;
         box-shadow: 0 10px 25px rgba(0, 240, 255, 0.4);
     }
-    .login-icon-box i {
-        font-size: 46px;
-        color: #0f172a; 
+    .mobile-icon-box i {
+        font-size: 40px;
+        color: #0f172a;
     }
-    .login-title-center {
-        font-size: 1.4rem;
-        font-weight: 800;
-        color: #1e293b;
-        margin-bottom: 0.4rem;
-        letter-spacing: -0.02em;
-    }
-    .login-subtitle-center {
+    .mobile-subtitle {
         font-size: 0.85rem;
         color: #64748b;
-        margin-bottom: 2.5rem;
+        margin-bottom: 2rem;
+        text-align: center;
     }
-    .custom-form {
+    .mobile-form {
         width: 100%;
         display: flex;
         flex-direction: column;
         gap: 1.25rem;
     }
-    .custom-input-group {
+    .mobile-input-group {
         display: flex;
         flex-direction: column;
         gap: 0.5rem;
     }
-    .custom-label {
+    .mobile-label {
         font-size: 0.7rem;
         font-weight: 700;
         text-transform: uppercase;
@@ -73,7 +247,7 @@
         color: #64748b;
         margin-left: 0.25rem;
     }
-    .custom-input-wrap {
+    .mobile-input-wrap {
         background: white;
         border-radius: 14px;
         display: flex;
@@ -82,12 +256,12 @@
         height: 3.5rem;
         box-shadow: 0 2px 10px rgba(0,0,0,0.02);
     }
-    .custom-input-wrap i:first-child {
+    .mobile-input-wrap i:first-child {
         color: #94a3b8;
         font-size: 1.25rem;
         margin-right: 0.75rem;
     }
-    .custom-input {
+    .mobile-input {
         border: none;
         outline: none;
         width: 100%;
@@ -95,83 +269,46 @@
         background: transparent;
         font-size: 0.95rem;
         color: #334155;
-        font-family: inherit;
     }
-    .custom-input::placeholder {
-        color: #cbd5e1;
-    }
-    .pwd-visibility-toggle {
-        color: #94a3b8;
-        background: transparent;
-        border: none;
-        cursor: pointer;
-        font-size: 1.25rem;
-        padding: 0;
-        display: flex;
-    }
-    .forgot-pwd-link {
-        text-align: right;
-        font-size: 0.8rem;
-        font-weight: 700;
-        color: #00bcd4; /* Accent color matching image text */
-        text-decoration: none;
-        margin-top: -0.25rem;
-    }
-    .custom-submit-btn {
+    .mobile-submit-btn {
         width: 100%;
         background-color: #00f0ff;
         color: #0f172a;
         font-size: 1rem;
         font-weight: 800;
         border: none;
-        border-radius: 9999px; /* Pill shape */
+        border-radius: 9999px;
         height: 3.5rem;
         margin-top: 1rem;
-        cursor: pointer;
         box-shadow: 0 8px 20px rgba(0, 240, 255, 0.4);
-        transition: transform 0.2s, box-shadow 0.2s;
     }
-    .custom-submit-btn:active {
-        transform: scale(0.97);
-        box-shadow: 0 4px 10px rgba(0, 240, 255, 0.4);
+    .mobile-face-link {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 0.5rem;
+        text-decoration: none;
+        margin-top: 1.5rem;
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: #94a3b8;
     }
-    
-    /* Mobile Header Box as a full-width continuous Top App Bar */
-    .mobile-header-wrapper {
-        width: 100%;
-        margin: 0;
-        padding: 0;
-    }
+
     .mobile-header-box {
         background-color: white;
-        border-radius: 0; /* Full edge-to-edge width */
         display: flex;
         align-items: center;
         padding: 1.1rem 1.25rem;
         width: 100%;
-        max-width: 100%;
         box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
     }
-    .mobile-header-box .back-btn {
-        color: #0f172a;
-        font-size: 1.25rem;
-        text-decoration: none;
-        display: flex;
-        width: 24px;
-    }
-    .mobile-header-box .title {
-        flex-grow: 1;
-        text-align: center;
-        font-size: 1.1rem;
-        font-weight: 600;
-        color: #0f172a; /* Almost black text to match precisely */
-        margin-right: 24px; /* to precisely counter the back button footprint */
-    }
+    .mobile-header-box .back-btn { color: #0f172a; font-size: 1.25rem; }
+    .mobile-header-box .title { flex-grow:1; text-align:center; font-size:1.1rem; font-weight:600; margin-right:24px; }
     /* Hide the default mobile navbar since we use the custom box */
     .mobile-navbar { display: none !important; }
     </style>
 
-    <!-- Floating Mobile Header Box exactly like the requested Image -->
+    <!-- Floating Mobile Header Box -->
     <div class="mobile-only mobile-header-wrapper">
         <div class="mobile-header-box">
             <a href="{% url 'welcome' %}" class="back-btn">
@@ -181,7 +318,7 @@
         </div>
     </div>
 
-    <!-- Desktop Navbar (Hidden on mobile) -->
+    <!-- Desktop Navbar -->
     <nav class="navbar bg-transparent-nav desktop-only">
         <div class="logo">
             <i class="ph-fill ph-check-square-offset"></i>
@@ -194,60 +331,114 @@
         </div>
     </nav>
 
-    <main class="custom-login-container">
-        <!-- Center Cyan Icon Box -->
-        <div class="login-icon-box">
-            <i class="ph-bold ph-user"></i>
+    <main style="flex-grow: 1; display: flex; flex-direction: column;">
+        <!-- DESKTOP VIEW (Card Style) -->
+        <div class="desktop-only login-container-desktop">
+            <div class="login-card">
+                <div class="header-title">Sign In</div>
+                <div class="header-subtitle">Please enter your credentials to continue.</div>
+
+                {% if error %}
+                    <div style="color: #ef4444; font-size: 0.9rem; margin-bottom: 1.5rem; font-weight: 600;">{{ error }}</div>
+                {% endif %}
+
+                <form method="post" novalidate>
+                    {% csrf_token %}
+                    <div class="desktop-form-group">
+                        <label class="desktop-label" for="email_desktop">Email Address</label>
+                        <div class="desktop-input-wrap">
+                            <i class="ph-bold ph-envelope-simple"></i>
+                            <input id="email_desktop" name="email" type="email" class="desktop-input" placeholder="name@company.com" value="{{ email|default:'' }}" required>
+                        </div>
+                    </div>
+
+                    <div class="desktop-form-group">
+                        <div class="label-row">
+                            <label class="desktop-label" for="password_desktop">Password</label>
+                            <a href="#" class="desktop-forgot-link">Forgot Password?</a>
+                        </div>
+                        <div class="desktop-input-wrap">
+                            <i class="ph-bold ph-lock-simple"></i>
+                            <input id="password_desktop" name="password" type="password" class="desktop-input" placeholder="••••••••" required>
+                            <button type="button" class="pwd-toggle" onclick="togglePassword('password_desktop', 'eyeIconDesktop')">
+                                <i class="ph-bold ph-eye" id="eyeIconDesktop"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="desktop-btn-primary">Sign In</button>
+
+                    <div class="separator-container">
+                        <span class="separator-text">ALTERNATIVE ACCESS</span>
+                    </div>
+
+                    <a href="{% url 'signin' %}" class="desktop-btn-outline">
+                        <i class="ph-bold ph-scan-smiley"></i> Sign in with Face Recognition
+                    </a>
+                </form>
+            </div>
+
+            <footer class="desktop-footer">
+                <p>© 2023 AttendancePro Systems. All rights reserved.</p>
+                <div class="footer-links-row">
+                    <a href="#">Privacy Policy</a>
+                    <a href="#">Terms of Service</a>
+                </div>
+            </footer>
         </div>
 
-        <!-- Header -->
-        <div class="login-title-center">Manual Login</div>
-        <div class="login-subtitle-center">Enter your credentials to continue</div>
-
-        <!-- Start Form -->
-        {% if error %}
-            <div style="width:100%; text-align:center; font-size: 0.9rem; margin-top:-1.5rem; margin-bottom:1.5rem; color:#ef4444; font-weight:600;" role="alert">{{ error }}</div>
-        {% endif %}
-
-        <form method="post" class="custom-form" novalidate>
-            {% csrf_token %}
+        <!-- MOBILE VIEW (Compact Cyan Style) -->
+        <div class="mobile-only mobile-custom-container">
+            <div class="mobile-icon-box">
+                <i class="ph-bold ph-user"></i>
+            </div>
             
-            <div class="custom-input-group">
-                <label class="custom-label" for="email">EMAIL</label>
-                <div class="custom-input-wrap">
-                    <i class="ph-fill ph-envelope"></i>
-                    <input id="email" name="email" type="email" class="custom-input" placeholder="name@company.com" value="{{ email|default:'' }}" required>
+            <div class="mobile-subtitle">Enter your credentials to continue</div>
+
+            {% if error %}
+                <div style="color: #ef4444; font-size: 0.9rem; margin-bottom: 1rem; font-weight: 600; text-align: center;">{{ error }}</div>
+            {% endif %}
+
+            <form method="post" class="mobile-form" novalidate>
+                {% csrf_token %}
+                <div class="mobile-input-group">
+                    <label class="mobile-label" for="email_mobile">EMAIL</label>
+                    <div class="mobile-input-wrap">
+                        <i class="ph-fill ph-envelope"></i>
+                        <input id="email_mobile" name="email" type="email" class="mobile-input" placeholder="name@company.com" value="{{ email|default:'' }}" required>
+                    </div>
                 </div>
-            </div>
 
-            <div class="custom-input-group">
-                <label class="custom-label" for="password">PASSWORD</label>
-                <div class="custom-input-wrap">
-                    <i class="ph-fill ph-lock"></i>
-                    <input id="password" name="password" type="password" class="custom-input" placeholder="••••••••" required>
-                    <button type="button" class="pwd-visibility-toggle" onclick="togglePassword()" aria-label="Toggle password visibility">
-                        <i class="ph-bold ph-eye" id="eyeIcon"></i>
-                    </button>
+                <div class="mobile-input-group">
+                    <label class="mobile-label" for="password_mobile">PASSWORD</label>
+                    <div class="mobile-input-wrap">
+                        <i class="ph-fill ph-lock"></i>
+                        <input id="password_mobile" name="password" type="password" class="mobile-input" placeholder="••••••••" required>
+                        <button type="button" class="pwd-visibility-toggle" onclick="togglePassword('password_mobile', 'eyeIconMobile')" style="background:none; border:none; color:#94a3b8; font-size:1.25rem;">
+                            <i class="ph-bold ph-eye" id="eyeIconMobile"></i>
+                        </button>
+                    </div>
                 </div>
+
+                <a href="#" class="forgot-pwd-link" style="text-align:right; font-size:0.8rem; font-weight:700; color:#00bcd4; text-decoration:none;">Forgot Password?</a>
+
+                <button type="submit" class="mobile-submit-btn">Sign In</button>
+
+                <a href="{% url 'signin' %}" class="mobile-face-link">
+                    <i class="ph-bold ph-scan-smiley"></i> Use Face Recognition instead
+                </a>
+            </form>
+            
+            <div style="margin-top: auto; padding-top: 2rem; width: 100%;">
+                {% include "_footer.html" %}
             </div>
-
-            <!-- Forgot Password -->
-            <a href="#" class="forgot-pwd-link" onclick="return false;">Forgot Password?</a>
-
-            <!-- Submit -->
-            <button type="submit" class="custom-submit-btn">Sign In</button>
-
-            <!-- Original Alternative Link (re-styled to fit softly at the bottom) -->
-            <a href="{% url 'signin' %}" style="display:flex; justify-content:center; align-items:center; gap:0.5rem; text-decoration:none; margin-top:1.5rem; font-size:0.85rem; font-weight:600; color:#94a3b8;">
-                <i class="ph-bold ph-scan-smiley" style="font-size:1.1rem;"></i> Use Face Recognition instead
-            </a>
-        </form>
+        </div>
     </main>
     
     <script>
-        function togglePassword() {
-            const pwdInput = document.getElementById('password');
-            const eyeIcon = document.getElementById('eyeIcon');
+        function togglePassword(inputId, iconId) {
+            const pwdInput = document.getElementById(inputId);
+            const eyeIcon = document.getElementById(iconId);
             if (pwdInput.type === 'password') {
                 pwdInput.type = 'text';
                 eyeIcon.classList.remove('ph-eye');
@@ -259,9 +450,5 @@
             }
         }
     </script>
-    
-    <div style="margin-top: auto;">
-        {% include "_footer.html" %}
-    </div>
 </body>
 </html>
