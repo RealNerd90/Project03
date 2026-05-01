@@ -6,14 +6,9 @@ class TimezoneMiddleware:
         self.get_response = get_response
 
     def __call__(self, request):
-        setting = SystemSetting.objects.first()
-        if setting and setting.timezone:
-            try:
-                tz.activate(setting.timezone)
-            except Exception:
-                tz.deactivate()
-        else:
-            tz.deactivate()
+        # Dynamic timezone setting was removed from SystemSetting model.
+        # System will now use the default TIME_ZONE from settings.py.
+        tz.deactivate()
         
         response = self.get_response(request)
         return response

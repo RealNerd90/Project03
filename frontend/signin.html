@@ -39,11 +39,6 @@
             <div class="nav-spacer"></div>
         </div>
 
-        <div class="nav-links desktop-only">
-            <a href="{% url 'welcome' %}">Home</a>
-            <a href="#">Support</a>
-            <a href="#">About</a>
-        </div>
     </nav>
 
     <main class="signin-wrapper">
@@ -447,6 +442,28 @@
         const parts = value.split(`; ${name}=`);
         if (parts.length === 2) return parts.pop().split(';').shift();
     }
+
+    /* ---------------- SESSION TIMEOUT ---------------- */
+    const sessionTimeoutSeconds = {{ session_timeout_seconds|default:1800 }};
+    let signinTimeoutId = setTimeout(() => {
+        stopScanLoop();
+        setStatus("Sign-in session timed out.", "error");
+        setTimeout(() => {
+            window.location.href = '{% url "welcome" %}';
+        }, 2000);
+    }, sessionTimeoutSeconds * 1000);
+
+    // Optional: Reset timer on click/interaction if needed
+    document.addEventListener('click', () => {
+        clearTimeout(signinTimeoutId);
+        signinTimeoutId = setTimeout(() => {
+            stopScanLoop();
+            setStatus("Sign-in session timed out.", "error");
+            setTimeout(() => {
+                window.location.href = '{% url "welcome" %}';
+            }, 2000);
+        }, sessionTimeoutSeconds * 1000);
+    });
 
     /* ---------------- INIT ---------------- */
     startCamera();

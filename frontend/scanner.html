@@ -723,6 +723,28 @@
             beginScan();
         });
 
+        /* ---------------- SESSION TIMEOUT ---------------- */
+        const sessionTimeoutSeconds = {{ session_timeout_seconds|default:1800 }};
+        let scannerTimeoutId = setTimeout(() => {
+            stopScan();
+            setStatus("Scan session timed out.", "error");
+            setTimeout(() => {
+                window.location.href = '{% url "welcome" %}';
+            }, 2000);
+        }, sessionTimeoutSeconds * 1000);
+
+        // Reset timer on user interaction (optional, but good for retries)
+        document.addEventListener('click', () => {
+            clearTimeout(scannerTimeoutId);
+            scannerTimeoutId = setTimeout(() => {
+                stopScan();
+                setStatus("Scan session timed out.", "error");
+                setTimeout(() => {
+                    window.location.href = '{% url "welcome" %}';
+                }, 2000);
+            }, sessionTimeoutSeconds * 1000);
+        });
+
         window.addEventListener('resize', updateOverlaySize);
         startCamera().then(beginScan);
     </script>

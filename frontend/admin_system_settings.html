@@ -612,9 +612,46 @@
     }
     .btn-primary-lg:hover { background: var(--blue-dark); transform: translateY(-1px); }
 
+    /* ── Toasts ─────────────────────────────────────── */
+    .toast-stack {
+      position: fixed;
+      top: 22px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .toast {
+      padding: 15px 24px;
+      border-radius: 12px;
+      color: #fff;
+      font-weight: 600;
+      font-size: 14px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.14);
+      animation: slideIn 0.3s ease;
+    }
+
+    .toast.success { background: #10b981; }
+    .toast.error   { background: #ef4444; }
+
+    @keyframes slideIn {
+      from { transform: translateX(120%); opacity: 0; }
+      to   { transform: translateX(0);    opacity: 1; }
+    }
+
   </style>
 </head>
 <body class="admin-dashboard">
+  <div class="toast-stack">
+    {% for message in messages %}
+    <div class="toast {{ message.tags }}">{{ message }}</div>
+    {% endfor %}
+  </div>
+
   <div class="shell">
     <!-- Sidebar -->
     <aside class="sidebar">
@@ -688,28 +725,18 @@
             
             <div class="form-grid-2">
               <div class="form-group">
-                <label class="form-label">Default Language</label>
-                <select class="form-select" name="default_language">
-                  <option value="English" {% if setting.default_language == 'English' %}selected{% endif %}>English (US/UK)</option>
-                  <option value="Hindi" {% if setting.default_language == 'Hindi' %}selected{% endif %}>Hindi (हिन्दी)</option>
-                  <option value="Tamil" {% if setting.default_language == 'Tamil' %}selected{% endif %}>Tamil (தமிழ்)</option>
-                  <option value="Telugu" {% if setting.default_language == 'Telugu' %}selected{% endif %}>Telugu (తెలుగు)</option>
-                  <option value="Bengali" {% if setting.default_language == 'Bengali' %}selected{% endif %}>Bengali (বাংলা)</option>
-                  <option value="Marathi" {% if setting.default_language == 'Marathi' %}selected{% endif %}>Marathi (मराठी)</option>
+                <label class="form-label">Session Timeout</label>
+                <select class="form-select" name="session_timeout">
+                  <option value="15" {% if setting.session_timeout == 15 %}selected{% endif %}>15 Seconds</option>
+                  <option value="30" {% if setting.session_timeout == 30 %}selected{% endif %}>30 Seconds</option>
+                  <option value="60" {% if setting.session_timeout == 60 %}selected{% endif %}>1 Minute</option>
+                  <option value="120" {% if setting.session_timeout == 120 %}selected{% endif %}>2 Minutes</option>
+                  <option value="240" {% if setting.session_timeout == 240 %}selected{% endif %}>4 Minutes</option>
                 </select>
               </div>
               <div class="form-group">
-                <label class="form-label">Time Zone</label>
-                <select class="form-select" name="timezone">
-                  <option value="Asia/Kolkata" {% if setting.timezone == 'Asia/Kolkata' %}selected{% endif %}>IST (India Standard Time - Kolkata)</option>
-                  <option value="UTC" {% if setting.timezone == 'UTC' %}selected{% endif %}>UTC (Universal Coordinated Time)</option>
-                  <option value="Europe/London" {% if setting.timezone == 'Europe/London' %}selected{% endif %}>GMT/BST (London)</option>
-                  <option value="America/New_York" {% if setting.timezone == 'America/New_York' %}selected{% endif %}>EST/EDT (New York)</option>
-                  <option value="Asia/Dubai" {% if setting.timezone == 'Asia/Dubai' %}selected{% endif %}>GST (Dubai)</option>
-                  <option value="Asia/Singapore" {% if setting.timezone == 'Asia/Singapore' %}selected{% endif %}>SGT (Singapore)</option>
-                  <option value="Asia/Tokyo" {% if setting.timezone == 'Asia/Tokyo' %}selected{% endif %}>JST (Tokyo)</option>
-                  <option value="Australia/Sydney" {% if setting.timezone == 'Australia/Sydney' %}selected{% endif %}>AEST/AEDT (Sydney)</option>
-                </select>
+                <label class="form-label">Max Login Attempts</label>
+                <input type="number" class="form-input" name="max_login_attempts" value="{{ setting.max_login_attempts }}" min="1" max="20">
               </div>
             </div>
 
@@ -789,7 +816,7 @@
 
             <div class="info-alert">
               <i class="ph-bold ph-info"></i>
-              This will send an automated notification to all active users at the specified time based on the portal's timezone.
+              This will send an automated notification to all active users at the specified time based on the server's timezone.
             </div>
 
             <div class="event-sound-item" style="border-bottom: none; padding-bottom: 0;">
@@ -895,5 +922,16 @@
       </main>
     </div>
   </div>
+
+  <script>
+    // Auto-hide toasts
+    setTimeout(function () {
+      document.querySelectorAll('.toast').forEach(function (t) {
+        t.style.transition = 'opacity 0.4s';
+        t.style.opacity = '0';
+        setTimeout(function () { t.remove(); }, 400);
+      });
+    }, 4000);
+  </script>
 </body>
 </html>

@@ -94,8 +94,8 @@ class GeofenceSetting(models.Model):
 class SystemSetting(models.Model):
     """Global configuration for the entire system."""
 
-    default_language = models.CharField(max_length=255, default="English")
-    timezone = models.CharField(max_length=255, default="Asia/Kolkata")
+    session_timeout = models.IntegerField(default=30)  # in seconds
+    max_login_attempts = models.IntegerField(default=5)
     maintenance_mode = models.BooleanField(default=False)
     retention_days = models.IntegerField(default=90)
     admin_email = models.EmailField(default="admin@gmail.com")
@@ -109,5 +109,5 @@ class SystemSetting(models.Model):
         verbose_name_plural = "System Settings"
 
     def __str__(self) -> str:
-        return f"System Config ({self.system_name})"
+        return f"System Config (Updated: {self.updated_at.strftime('%Y-%m-%d %H:%M')})"
 

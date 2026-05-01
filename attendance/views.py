@@ -537,8 +537,8 @@ def admin_system_settings(request: HttpRequest) -> HttpResponse:
 
     if request.method == "POST":
         try:
-            setting.default_language = request.POST.get("default_language", setting.default_language)
-            setting.timezone = request.POST.get("timezone", setting.timezone)
+            setting.session_timeout = int(request.POST.get("session_timeout", setting.session_timeout))
+            setting.max_login_attempts = int(request.POST.get("max_login_attempts", setting.max_login_attempts))
             setting.maintenance_mode = "maintenance_mode" in request.POST
             setting.retention_days = int(request.POST.get("retention_days", setting.retention_days))
             setting.admin_email = request.POST.get("admin_email", setting.admin_email)
@@ -1165,20 +1165,36 @@ def settings_view(request: HttpRequest) -> HttpResponse:
 def scanner(request: HttpRequest) -> HttpResponse:
     """Render the face scanner page."""
     display_name = _normalize_display_name(request.session.get("display_name"))
+    from .models import SystemSetting
+    setting = SystemSetting.objects.first()
+    timeout_value = setting.session_timeout if setting else 30
+
     return render(
         request,
         "scanner.html",
-        {"profile_photo_url": _profile_photo_url_for(display_name)},
+        {
+            "profile_photo_url": _profile_photo_url_for(display_name),
+            "session_timeout_seconds": timeout_value,
+        },
     )
 
 
 def signin(request: HttpRequest) -> HttpResponse:
     """Render the sign-in (scanner) page."""
-    return render(request, "signin.html")
+    from .models import SystemSetting
+    setting = SystemSetting.objects.first()
+    timeout_value = setting.session_timeout if setting else 30
+
+    return render(
+        request, 
+        "signin.html",
+        {"session_timeout_seconds": timeout_value}
+    )
 
 
 def manual_login(request: HttpRequest) -> HttpResponse:
-    """Manual email/password login (simple registry-based)."""
+    """Manual email/password login (simple registry-based) with lockout."""
+    from django.core.cache import cache
     if request.method == "POST":
         email = (request.POST.get("email") or "").strip()
         password = (request.POST.get("password") or "").strip()
@@ -1190,30 +1206,62 @@ def manual_login(request: HttpRequest) -> HttpResponse:
                 status=400,
             )
 
+        email_key = email.lower()
+        lockout_key = f"lockout_{email_key}"
+        attempts_key = f"login_attempts_{email_key}"
+
+        if cache.get(lockout_key):
+            return render(
+                request,
+                "manual_login.html",
+                {"error": "Maximum login attempts exceeded. Please try again after 5 minutes.", "email": email},
+                status=403,
+            )
+
+        from .models import SystemSetting
+        setting = SystemSetting.objects.first()
+        max_attempts = setting.max_login_attempts if setting else 5
+
+        def record_failed_attempt():
+            attempts = cache.get(attempts_key, 0) + 1
+            if attempts >= max_attempts:
+                cache.set(lockout_key, True, timeout=300) # 5 minutes lockout
+                cache.delete(attempts_key)
+                return True # Locked out
+            else:
+                cache.set(attempts_key, attempts, timeout=3600) # Remember for 1 hour
+                return False
+
         admin = AdminAccount.objects.filter(email__iexact=email).first()
         if admin and admin.check_password(password):
+            cache.delete(attempts_key)
             request.session["is_admin"] = True
             request.session["display_name"] = "Admin"
             return redirect("admin-dashboard")
 
         user = RegisteredUser.objects.filter(email__iexact=email).first()
         if not user:
+            locked = record_failed_attempt()
+            error_msg = "Maximum login attempts exceeded. Please try again after 5 minutes." if locked else "No account found for that email."
             return render(
                 request,
                 "manual_login.html",
-                {"error": "No account found for that email.", "email": email},
-                status=400,
+                {"error": error_msg, "email": email},
+                status=400 if not locked else 403,
             )
 
         # Verify password (stored in attendance_registereduser.password).
         if not user.password or user.password != password:
+            locked = record_failed_attempt()
+            error_msg = "Maximum login attempts exceeded. Please try again after 5 minutes." if locked else "Invalid email or password."
             return render(
                 request,
                 "manual_login.html",
-                {"error": "Invalid email or password.", "email": email},
-                status=400,
+                {"error": error_msg, "email": email},
+                status=400 if not locked else 403,
             )
 
+        cache.delete(attempts_key)
         request.session["display_name"] = _normalize_display_name(user.name)
         request.session.pop("is_admin", None)
         return redirect("dashboard")
