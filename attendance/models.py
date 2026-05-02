@@ -111,3 +111,14 @@ class SystemSetting(models.Model):
     def __str__(self) -> str:
         return f"System Config (Updated: {self.updated_at.strftime('%Y-%m-%d %H:%M')})"
 
+class ReminderSound(models.Model):
+    name = models.CharField(max_length=255)
+    file = models.FileField(upload_to='')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self) -> str:
+        return self.name
+

@@ -517,7 +517,7 @@
         <div class="sidebar-user">
           <div class="user-avatar"><i class="ph-bold ph-user"></i></div>
           <div class="user-info">
-            <strong>Alex Morgan</strong>
+            <strong>{{ request.session.display_name|default:"System Admin" }}</strong>
             <span>System Admin</span>
           </div>
           <a class="user-logout" href="{% url 'logout' %}" style="text-decoration: none;">

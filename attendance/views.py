@@ -58,6 +58,9 @@ def welcome(request: HttpRequest) -> HttpResponse:
 
 def dashboard(request: HttpRequest) -> HttpResponse:
     """Render the main dashboard using the existing static HTML as a template."""
+    if request.session.get("is_admin"):
+        return redirect("admin-dashboard")
+
     today = timezone.localdate()
     display_name = _normalize_display_name(request.session.get("display_name"))
     profile_photo_url = _profile_photo_url_for(display_name)
@@ -530,7 +533,7 @@ def admin_system_settings(request: HttpRequest) -> HttpResponse:
     if not request.session.get("is_admin"):
         return redirect("manual-login")
     
-    from .models import SystemSetting
+    from .models import SystemSetting, ReminderSound
     setting = SystemSetting.objects.first()
     if not setting:
         setting = SystemSetting.objects.create()
@@ -559,9 +562,13 @@ def admin_system_settings(request: HttpRequest) -> HttpResponse:
         except Exception as e:
             messages.error(request, f"Error updating settings: {e}")
 
+    import re
+    sounds = sorted(list(ReminderSound.objects.all()), key=lambda s: [int(t) if t.isdigit() else t.lower() for t in re.split(r'(\d+)', s.name)])
+
     context = {
         "active_page": "system-settings",
         "setting": setting, # Explicitly pass for clarity
+        "sounds": sounds,
     }
     return render(request, "admin_system_settings.html", context)
 
@@ -603,6 +610,9 @@ def admin_change_password(request: HttpRequest) -> HttpResponse:
 
 def analytics(request: HttpRequest) -> HttpResponse:
     """Render the analytics page with real-time statistics and trends."""
+    if request.session.get("is_admin"):
+        return redirect("admin-dashboard")
+
     display_name = _normalize_display_name(request.session.get("display_name"))
     profile_photo_url = _profile_photo_url_for(display_name)
     
@@ -894,10 +904,7 @@ def analytics(request: HttpRequest) -> HttpResponse:
 
 
 def logout_view(request: HttpRequest) -> HttpResponse:
-    """POST-only logout; UI confirmation is handled client-side via a modal."""
-    if request.method != "POST":
-        return redirect("dashboard")
-
+    """Flush the session and redirect to signin."""
     try:
         request.session.flush()
     except Exception:
@@ -907,6 +914,9 @@ def logout_view(request: HttpRequest) -> HttpResponse:
 
 def profile_view(request: HttpRequest) -> HttpResponse:
     """Render the profile page based on the provided UI design."""
+    if request.session.get("is_admin"):
+        return redirect("admin-dashboard")
+
     display_name = _normalize_display_name(request.session.get("display_name"))
     profile_photo_url = _profile_photo_url_for(display_name)
 
@@ -980,6 +990,9 @@ def profile_view(request: HttpRequest) -> HttpResponse:
 
 def profile_edit_view(request: HttpRequest) -> HttpResponse:
     """Render the edit profile form page."""
+    if request.session.get("is_admin"):
+        return redirect("admin-dashboard")
+
     display_name = _normalize_display_name(request.session.get("display_name"))
     profile_photo_url = _profile_photo_url_for(display_name)
 
@@ -1808,3 +1821,55 @@ def create_attendance_record(request: HttpRequest) -> JsonResponse:
         )
     except Exception as exc:  # pragma: no cover - defensive
         return JsonResponse({"detail": f"Error creating record: {exc}"}, status=500)
+
+def api_settings(request: HttpRequest) -> JsonResponse:
+    from .models import SystemSetting
+    setting = SystemSetting.objects.first()
+    if not setting:
+        return JsonResponse({'reminder_time': '', 'enable_reminder_sound': False})
+    return JsonResponse({
+        'reminder_time': setting.reminder_time.strftime('%H:%M') if setting.reminder_time else '',
+        'enable_reminder_sound': setting.enable_reminder_sound
+    })
+
+
+@require_POST
+def upload_reminder_sound(request: HttpRequest) -> JsonResponse:
+    if not request.session.get('is_admin'):
+        return JsonResponse({'success': False, 'error': 'Unauthorized'}, status=403)
+    from .models import ReminderSound
+    import os
+    
+    file = request.FILES.get('sound_upload')
+    if not file:
+        return JsonResponse({'success': False, 'error': 'No file provided'}, status=400)
+    
+    if file.size > 2 * 1024 * 1024:
+        return JsonResponse({'success': False, 'error': 'File too large. Maximum size is 2MB.'}, status=400)
+        
+    ext = os.path.splitext(file.name)[1].lower()
+    if ext not in ['.mp3', '.wav']:
+        return JsonResponse({'success': False, 'error': 'Invalid file format. Only MP3 and WAV are allowed.'}, status=400)
+        
+    try:
+        sound = ReminderSound.objects.create(name=file.name, file=file)
+        return JsonResponse({'success': True, 'id': sound.id, 'name': sound.name, 'url': sound.file.url})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@require_POST
+def delete_reminder_sound(request: HttpRequest, sound_id: int) -> JsonResponse:
+    if not request.session.get('is_admin'):
+        return JsonResponse({'success': False, 'error': 'Unauthorized'}, status=403)
+    from .models import ReminderSound
+    try:
+        sound = ReminderSound.objects.get(id=sound_id)
+        if sound.file:
+            sound.file.delete(save=False)
+        sound.delete()
+        return JsonResponse({'success': True})
+    except ReminderSound.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Sound not found'}, status=404)
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)

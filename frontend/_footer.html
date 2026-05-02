@@ -1,4 +1,105 @@
+{% load static %}
 <footer class="signin-footer">
   <p class="copyright">© 2024 AttendancePro Management System. All rights reserved.</p>
 </footer>
 
+{% if system_settings %}
+<script>
+(function() {
+    let reminderTimeStr = "{{ system_settings.reminder_time|time:'H:i' }}";
+    let enableSound = {{ system_settings.enable_reminder_sound|yesno:"true,false" }};
+    
+    const getTodayDateString = () => new Date().toISOString().split('T')[0];
+    
+    function triggerReminder() {
+        const today = getTodayDateString();
+        const lastNotified = localStorage.getItem('lastAttendanceReminderDate');
+        
+        if (lastNotified !== today) {
+            localStorage.setItem('lastAttendanceReminderDate', today);
+            
+            if (enableSound) {
+                const audio = new Audio("{% static 'notification.wav' %}");
+                audio.play().catch(e => console.log('Audio play prevented:', e));
+            }
+            
+            if (Notification && Notification.permission === 'granted') {
+                new Notification('Attendance Reminder', {
+                    body: 'It is time for your attendance check-in/check-out.',
+                    icon: '{% static "default-avatar.png" %}'
+                });
+            } else if (Notification && Notification.permission !== 'denied') {
+                Notification.requestPermission().then(permission => {
+                    if (permission === 'granted') {
+                        new Notification('Attendance Reminder', {
+                            body: 'It is time for your attendance check-in/check-out.',
+                            icon: '{% static "default-avatar.png" %}'
+                        });
+                    }
+                });
+            }
+            
+            const toastStack = document.querySelector('.toast-stack');
+            if (toastStack) {
+                const toast = document.createElement('div');
+                toast.className = 'toast success';
+                toast.textContent = 'Reminder: It is time for your attendance check-in!';
+                toastStack.appendChild(toast);
+                setTimeout(() => toast.remove(), 10000);
+            } else {
+                const div = document.createElement('div');
+                div.style.position = 'fixed';
+                div.style.top = '22px';
+                div.style.left = '50%';
+                div.style.transform = 'translateX(-50%)';
+                div.style.backgroundColor = '#1d6ff3';
+                div.style.color = '#fff';
+                div.style.padding = '15px 24px';
+                div.style.borderRadius = '12px';
+                div.style.zIndex = '9999';
+                div.style.boxShadow = '0 8px 24px rgba(0,0,0,0.14)';
+                div.style.fontWeight = '600';
+                div.style.fontSize = '14px';
+                div.textContent = 'Reminder: It is time for your attendance check-in!';
+                document.body.appendChild(div);
+                setTimeout(() => div.remove(), 10000);
+            }
+        }
+    }
+
+    async function checkReminder() {
+        // Poll API to get the latest settings just in case it was updated in another tab
+        try {
+            const response = await fetch('/api/settings/');
+            if (response.ok) {
+                const data = await response.json();
+                reminderTimeStr = data.reminder_time;
+                enableSound = data.enable_reminder_sound;
+            }
+        } catch (e) {
+            console.error('Error fetching settings:', e);
+        }
+
+        if (!reminderTimeStr || reminderTimeStr === "") return;
+
+        const now = new Date();
+        const hours = String(now.getHours()).padStart(2, '0');
+        const minutes = String(now.getMinutes()).padStart(2, '0');
+        const currentTimeStr = `${hours}:${minutes}`;
+        
+        if (currentTimeStr === reminderTimeStr) {
+            triggerReminder();
+        }
+    }
+
+    if (window.Notification && Notification.permission === 'default') {
+        Notification.requestPermission();
+    }
+
+    // Check every 30 seconds
+    setInterval(checkReminder, 30000);
+    // Also check immediately on load
+    checkReminder();
+})();
+</script>
+{% endif %}

@@ -683,8 +683,8 @@
             <img src="https://i.pravatar.cc/100?img=11" alt="Admin" style="width:100%;height:100%;object-fit:cover;">
           </div>
           <div class="user-info">
-            <strong>Admin User</strong>
-            <span>SUPER ADMIN</span>
+            <strong>{{ request.session.display_name|default:"System Admin" }}</strong>
+            <span>System Admin</span>
           </div>
           <a class="user-logout" href="{% url 'logout' %}" style="text-decoration: none;">
             <i class="ph-bold ph-sign-out"></i>

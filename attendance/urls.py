@@ -27,5 +27,8 @@ urlpatterns = [
     path("register/", views.registration, name="register"),
     path("register/face/", views.register_face, name="register-face"),
     path("api/attendance/", views.create_attendance_record, name="api-attendance-create"),
+    path("api/settings/", views.api_settings, name="api-settings"),
+    path("api/settings/sound/upload/", views.upload_reminder_sound, name="api-sound-upload"),
+    path("api/settings/sound/<int:sound_id>/delete/", views.delete_reminder_sound, name="api-sound-delete"),
 ]
 
