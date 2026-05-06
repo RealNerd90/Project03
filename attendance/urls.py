@@ -26,6 +26,7 @@ urlpatterns = [
     path("attendance/checkout/scan/", views.attendance_checkout_scan, name="attendance-checkout-scan"),
     path("register/", views.registration, name="register"),
     path("register/face/", views.register_face, name="register-face"),
+    path("register/success/", views.registration_success, name="register-success"),
     path("api/attendance/", views.create_attendance_record, name="api-attendance-create"),
     path("api/settings/", views.api_settings, name="api-settings"),
     path("api/settings/sound/upload/", views.upload_reminder_sound, name="api-sound-upload"),

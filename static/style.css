@@ -945,9 +945,11 @@ html[data-theme="dark"] .bg-gray-light {
 
 .success-subtitle {
     color: rgba(15, 23, 42, 0.7);
-    margin: 0;
+    margin: 0 0 0.5rem 0;
     font-size: 1rem;
     text-align: center;
+    line-height: 1.6;
+    max-width: 90%;
 }
 
 .success-profile {
@@ -1089,14 +1091,186 @@ html[data-theme="dark"] .attendance-row {
 }
 
 @media (max-width: 640px) {
-    .success-card {
-        padding: 2.5rem 1.5rem 1.5rem;
+    .mobile-hide {
+        display: none !important;
     }
+
+    body.no-scroll {
+        overflow-y: auto !important; /* Allow scroll on mobile if card is tall */
+    }
+
+    .success-wrapper {
+        padding: 1.5rem 1rem;
+        align-items: flex-start;
+    }
+
+    .success-card {
+        padding: 2.2rem 1.25rem 1.5rem;
+        gap: 1.25rem;
+        margin-top: 1rem;
+    }
+
+    .success-badge {
+        width: 70px;
+        height: 70px;
+    }
+
+    .success-badge-inner {
+        width: 48px;
+        height: 48px;
+    }
+
+    .success-title {
+        font-size: 1.6rem;
+    }
+/* ── Registration Success Page ────────────────────────────────────────── */
+.reg-success-card {
+    width: min(440px, 95vw);
+    background: #ffffff;
+    border-radius: 1.5rem;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.06);
+    padding: 3rem 2rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 1.5rem;
+}
+
+.reg-success-badge {
+    width: 72px;
+    height: 72px;
+    background: #dcfce7; /* light green */
+    color: #16a34a; /* green */
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
+}
+
+.reg-success-badge i {
+    background: #16a34a;
+    color: white;
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    font-size: 1.5rem;
+}
+
+.reg-success-title {
+    font-size: 1.75rem;
+    font-weight: 800;
+    color: #0f172a;
+    margin: 0;
+}
+
+.reg-success-subtitle {
+    font-size: 1rem;
+    color: #64748b;
+    line-height: 1.6;
+    margin: 0;
+}
+
+.reg-info-box {
+    width: 100%;
+    background: #f8fafc;
+    border-radius: 1rem;
+    padding: 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.reg-info-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    text-align: left;
+}
+
+.reg-info-label {
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: #94a3b8;
+    letter-spacing: 0.05em;
+}
+
+.reg-info-value {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: #1e293b;
+}
+
+.reg-info-divider {
+    height: 1px;
+    background: rgba(0, 0, 0, 0.04);
+    width: 100%;
+}
+
+.btn-reg-success {
+    width: 100%;
+    padding: 1rem;
+    font-size: 1rem;
+    font-weight: 700;
+    border-radius: 0.75rem;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+}
+
+.reg-footer-note {
+    font-size: 0.9rem;
+    color: #94a3b8;
+    font-weight: 500;
+}
+
+/* Dark theme overrides */
+html[data-theme="dark"] .reg-success-card {
+    background: #1e293b;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+}
+
+html[data-theme="dark"] .reg-success-title {
+    color: #f8fafc;
+}
+
+html[data-theme="dark"] .reg-success-subtitle {
+    color: #94a3b8;
+}
+
+html[data-theme="dark"] .reg-info-box {
+    background: #0f172a;
+}
+
+html[data-theme="dark"] .reg-info-value {
+    color: #f1f5f9;
+}
+
+@media (max-width: 640px) {
+    .reg-success-card {
+        padding: 2.5rem 1.5rem;
+        gap: 1.25rem;
+    }
+
+    .reg-success-title {
+        font-size: 1.5rem;
+    }
+
+    .reg-success-subtitle {
+        font-size: 0.9rem;
+    }
+}
 
     .success-profile {
         flex-direction: column;
         align-items: center;
         text-align: center;
+        padding: 1.2rem 1rem;
     }
 
     .success-user {

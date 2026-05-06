@@ -442,7 +442,10 @@
                     stepIndex += 1;
                     if (stepIndex >= steps.length) {
                         setMessage(`Successfully registered ${fullName}.`, 'success');
-                        setTimeout(() => window.location.href = '{% url "signin" %}', 1100);
+                        setTimeout(() => {
+                            const params = new URLSearchParams({ name: fullName, id: result.user_id || '' });
+                            window.location.href = `{% url "register-success" %}?${params.toString()}`;
+                        }, 1100);
                         return;
                     }
                     renderStep();

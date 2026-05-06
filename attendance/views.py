@@ -1425,6 +1425,7 @@ def signin_scan(request: HttpRequest) -> HttpResponse:
             # Persist name for dashboard greeting (no full auth yet).
             display_name = _normalize_display_name(result.get("name"))
             request.session["display_name"] = display_name
+            request.session.pop("is_admin", None)
             return JsonResponse({
                 "success": True,
                 "name": display_name,
@@ -1500,6 +1501,7 @@ def attendance_checkin_scan(request: HttpRequest) -> JsonResponse:
 
     name = _normalize_display_name(result.get("name"))
     request.session["display_name"] = name
+    request.session.pop("is_admin", None)
     now = timezone.localtime(timezone.now())
 
     # Ensure single daily attendance
@@ -1586,6 +1588,7 @@ def attendance_checkout_scan(request: HttpRequest) -> JsonResponse:
 
     name = _normalize_display_name(result.get("name"))
     request.session["display_name"] = name
+    request.session.pop("is_admin", None)
     now = timezone.localtime(timezone.now())
 
     try:
@@ -1728,6 +1731,7 @@ def register_face(request: HttpRequest) -> HttpResponse:
             {
                 "success": True,
                 "message": f"Captured {direction}.",
+                "user_id": f"EMP-2024-{8800 + user.id}" if user.id else "EMP-2024-0000",
             },
             status=200,
         )
@@ -1767,6 +1771,18 @@ def register_face(request: HttpRequest) -> HttpResponse:
         except Exception:
             pass
     return render(request, "registration.html", context)
+
+
+def registration_success(request: HttpRequest) -> HttpResponse:
+    """Render the registration success page with user details."""
+    full_name = request.GET.get("name", "User")
+    user_id = request.GET.get("id", "EMP-2024-0000")
+    
+    context = {
+        "full_name": full_name,
+        "user_id": user_id,
+    }
+    return render(request, "registration_success.html", context)
 
 
 @csrf_exempt

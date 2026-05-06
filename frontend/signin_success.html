@@ -31,17 +31,17 @@
             </div>
 
             <h1 class="success-title">Identification Successful!</h1>
-            <p class="success-subtitle">You have been signed in successfully.</p>
+            <p class="success-subtitle">Welcome back! Your identity has been securely verified. We’re glad to have you with us today—your dashboard is being prepared, and your session is about to begin. Let's make today productive and successful!</p>
 
             <div class="success-profile">
                 <div class="success-user">
                     <p class="success-name">{{ name }}</p>
-                    <p class="success-id">ID: <span>{{ user_id }}</span></p>
+                    <p class="success-id mobile-hide">ID: <span>{{ user_id }}</span></p>
                     <p class="success-role">{{ account_role_label }} • {{ account_role_desc }}</p>
                 </div>
             </div>
 
-            <div class="attendance-log">
+            <div class="attendance-log mobile-hide">
                 <h2 class="attendance-log-title">Attendance Logged</h2>
                 <div class="attendance-row">
                     <div class="attendance-label"><i class="ph-fill ph-calendar"></i> Date</div>
