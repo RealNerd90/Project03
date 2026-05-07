@@ -13,6 +13,7 @@
     <!-- CSS -->
     <link rel="stylesheet" href="{% static 'style.css' %}">
     <script src="{% static 'theme.js' %}"></script>
+    <script src="{% static 'permissions.js' %}"></script>
     <!-- Phosphor Icons -->
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
 </head>
@@ -126,10 +127,11 @@
                                 </p>
                             </div>
                             <label class="switch">
-                                <input type="checkbox" checked>
+                                <input type="checkbox" id="notificationToggle" checked>
                                 <span class="slider round"></span>
                             </label>
                         </div>
+                        <p id="notificationStatusMsg" class="text-xs mt-[-1rem]" style="display:none;"></p>
 
                         <div class="flex-between">
                             <div>
@@ -297,6 +299,38 @@
             }
             updateAudioSource();
         });
+    </script>
+
+    <script>
+        // Notification Toggle Logic
+        const notificationToggle = document.getElementById('notificationToggle');
+        const notificationStatusMsg = document.getElementById('notificationStatusMsg');
+
+        if (notificationToggle) {
+            notificationToggle.addEventListener('change', async () => {
+                if (notificationToggle.checked) {
+                    const permission = await PermissionsManager.requestNotifications();
+                    if (permission === 'granted') {
+                        showNotificationStatus('Notifications enabled!', 'success');
+                    } else if (permission === 'denied') {
+                        showNotificationStatus('Notifications blocked by browser.', 'error');
+                        notificationToggle.checked = false;
+                    } else {
+                        showNotificationStatus('Notification support not found.', 'info');
+                    }
+                }
+            });
+        }
+
+        function showNotificationStatus(msg, type) {
+            if (!notificationStatusMsg) return;
+            notificationStatusMsg.textContent = msg;
+            notificationStatusMsg.style.display = 'block';
+            notificationStatusMsg.style.color = type === 'success' ? '#16a34a' : type === 'error' ? '#dc2626' : '#64748b';
+            setTimeout(() => {
+                notificationStatusMsg.style.display = 'none';
+            }, 3000);
+        }
     </script>
 
     <script>

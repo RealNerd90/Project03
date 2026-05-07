@@ -13,6 +13,7 @@
     <!-- CSS -->
     <link rel="stylesheet" href="{% static 'style.css' %}">
     <script src="{% static 'theme.js' %}" defer></script>
+    <script src="{% static 'permissions.js' %}"></script>
     <!-- Phosphor Icons -->
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
     <!-- Mediapip -->
@@ -40,6 +41,87 @@
         </div>
 
     </nav>
+
+    <!-- Permission Overlay -->
+    <div id="permissionOverlay" class="permission-overlay" style="display:none;">
+        <div class="permission-card">
+            <div class="permission-icon">
+                <i class="ph-fill ph-lock-key"></i>
+            </div>
+            <h2 class="permission-title">Permissions Required</h2>
+            <p class="permission-text">AttendancePro needs access to your camera to verify your identity through face recognition.</p>
+            <div id="insecureWarning" class="insecure-warning" style="display:none;">
+                <i class="ph-bold ph-warning-circle"></i>
+                <span>Warning: Browser security requires HTTPS for camera access on this device.</span>
+            </div>
+            <button id="grantPermissionsBtn" class="btn btn-primary w-full">Grant Permissions</button>
+            <a href="{% url 'welcome' %}" class="btn btn-text w-full mt-2">Go Back</a>
+        </div>
+    </div>
+
+    <style>
+        .permission-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.6);
+            backdrop-filter: blur(8px);
+            z-index: 2000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .permission-card {
+            background: white;
+            border-radius: 24px;
+            padding: 32px;
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.2);
+            animation: modalFadeIn 0.3s ease-out;
+        }
+        .permission-icon {
+            width: 64px;
+            height: 64px;
+            background: #e0f2fe;
+            color: #0284c7;
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+            margin: 0 auto 24px;
+        }
+        .permission-title {
+            font-size: 20px;
+            font-weight: 700;
+            color: #0f172a;
+            margin-bottom: 12px;
+        }
+        .permission-text {
+            font-size: 15px;
+            color: #64748b;
+            line-height: 1.6;
+            margin-bottom: 24px;
+        }
+        .insecure-warning {
+            background: #fef2f2;
+            color: #dc2626;
+            padding: 12px;
+            border-radius: 12px;
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 20px;
+            text-align: left;
+        }
+        @keyframes modalFadeIn {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+        }
+    </style>
 
     <main class="signin-wrapper">
         <div class="signin-card-container">
@@ -466,7 +548,44 @@
     });
 
     /* ---------------- INIT ---------------- */
-    startCamera();
+    async function initializeSignIn() {
+        const isSecure = PermissionsManager.checkSecureContext();
+        if (!isSecure) {
+            document.getElementById('permissionOverlay').style.display = 'flex';
+            document.getElementById('insecureWarning').style.display = 'flex';
+        }
+
+        try {
+            const cameraPermission = await navigator.permissions.query({ name: 'camera' });
+            if (cameraPermission.state === 'granted') {
+                startCamera();
+            } else {
+                document.getElementById('permissionOverlay').style.display = 'flex';
+            }
+        } catch (e) {
+            document.getElementById('permissionOverlay').style.display = 'flex';
+        }
+    }
+
+    document.getElementById('grantPermissionsBtn').addEventListener('click', async () => {
+        const btn = document.getElementById('grantPermissionsBtn');
+        btn.disabled = true;
+        btn.textContent = 'Requesting...';
+
+        const stream = await PermissionsManager.requestCamera();
+        
+        if (stream) {
+            stream.getTracks().forEach(t => t.stop());
+            document.getElementById('permissionOverlay').style.display = 'none';
+            startCamera();
+        } else {
+            btn.disabled = false;
+            btn.textContent = 'Grant Permissions';
+            setStatus('Camera permission is required to proceed.', 'error');
+        }
+    });
+
+    initializeSignIn();
     window.addEventListener('resize', updateOverlaySize);
 </script>
 </body>

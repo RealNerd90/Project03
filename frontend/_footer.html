@@ -28,15 +28,6 @@
                     body: 'It is time for your attendance check-in/check-out.',
                     icon: '{% static "default-avatar.png" %}'
                 });
-            } else if (Notification && Notification.permission !== 'denied') {
-                Notification.requestPermission().then(permission => {
-                    if (permission === 'granted') {
-                        new Notification('Attendance Reminder', {
-                            body: 'It is time for your attendance check-in/check-out.',
-                            icon: '{% static "default-avatar.png" %}'
-                        });
-                    }
-                });
             }
             
             const toastStack = document.querySelector('.toast-stack');
@@ -92,9 +83,7 @@
         }
     }
 
-    if (window.Notification && Notification.permission === 'default') {
-        Notification.requestPermission();
-    }
+    // Notification permission is now requested via user gesture in settings or scanner pages.
 
     // Check every 30 seconds
     setInterval(checkReminder, 30000);
