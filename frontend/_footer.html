@@ -6,89 +6,118 @@
 {% if system_settings %}
 <script>
 (function() {
+    // Initial state from Django template
     let reminderTimeStr = "{{ system_settings.reminder_time|time:'H:i' }}";
     let enableSound = {{ system_settings.enable_reminder_sound|yesno:"true,false" }};
     
-    const getTodayDateString = () => new Date().toISOString().split('T')[0];
+    // Helpers
+    const getTodayKey = () => new Date().toISOString().split('T')[0];
+    let serverOffset = 0; // ms difference between server and browser
     
-    function triggerReminder() {
-        const today = getTodayDateString();
-        const lastNotified = localStorage.getItem('lastAttendanceReminderDate');
-        
-        if (lastNotified !== today) {
-            localStorage.setItem('lastAttendanceReminderDate', today);
-            
-            if (enableSound) {
-                const audio = new Audio("{% static 'notification.wav' %}");
-                audio.play().catch(e => console.log('Audio play prevented:', e));
-            }
-            
-            if (Notification && Notification.permission === 'granted') {
-                new Notification('Attendance Reminder', {
-                    body: 'It is time for your attendance check-in/check-out.',
-                    icon: '{% static "default-avatar.png" %}'
-                });
-            }
-            
-            const toastStack = document.querySelector('.toast-stack');
-            if (toastStack) {
-                const toast = document.createElement('div');
-                toast.className = 'toast success';
-                toast.textContent = 'Reminder: It is time for your attendance check-in!';
-                toastStack.appendChild(toast);
-                setTimeout(() => toast.remove(), 10000);
-            } else {
-                const div = document.createElement('div');
-                div.style.position = 'fixed';
-                div.style.top = '22px';
-                div.style.left = '50%';
-                div.style.transform = 'translateX(-50%)';
-                div.style.backgroundColor = '#1d6ff3';
-                div.style.color = '#fff';
-                div.style.padding = '15px 24px';
-                div.style.borderRadius = '12px';
-                div.style.zIndex = '9999';
-                div.style.boxShadow = '0 8px 24px rgba(0,0,0,0.14)';
-                div.style.fontWeight = '600';
-                div.style.fontSize = '14px';
-                div.textContent = 'Reminder: It is time for your attendance check-in!';
-                document.body.appendChild(div);
-                setTimeout(() => div.remove(), 10000);
-            }
-        }
-    }
-
-    async function checkReminder() {
-        // Poll API to get the latest settings just in case it was updated in another tab
+    // Fetch settings and sync time from API
+    async function syncSettings() {
         try {
             const response = await fetch('/api/settings/');
             if (response.ok) {
                 const data = await response.json();
                 reminderTimeStr = data.reminder_time;
                 enableSound = data.enable_reminder_sound;
+                
+                if (data.server_time && data.server_date) {
+                    const serverTime = new Date(data.server_date + 'T' + data.server_time);
+                    const browserTime = new Date();
+                    serverOffset = serverTime.getTime() - browserTime.getTime();
+                }
             }
         } catch (e) {
-            console.error('Error fetching settings:', e);
+            console.error('Reminder sync failed:', e);
         }
+    }
 
-        if (!reminderTimeStr || reminderTimeStr === "") return;
+    function triggerReminder() {
+        const today = getTodayKey();
+        const lastNotified = localStorage.getItem('lastAttendanceReminderDate');
+        
+        // Final guard to ensure one reminder per day per browser
+        if (lastNotified === today) return;
+        localStorage.setItem('lastAttendanceReminderDate', today);
+        
+        // 1. Play Sound
+        if (enableSound) {
+            const audio = new Audio("{% static 'notification.wav' %}");
+            audio.play().catch(e => console.log('Audio blocked by browser policy. Interaction needed.'));
+        }
+        
+        // 2. Browser Notification
+        if (window.Notification && Notification.permission === 'granted') {
+            new Notification('Attendance Portal', {
+                body: 'Scheduled attendance check-in time has arrived.',
+                icon: '{% static "default-avatar.png" %}',
+                silent: true // We handle our own sound
+            });
+        }
+        
+        // 3. UI Toast
+        showToast('Reminder: It is time for your attendance check-in/out!');
+    }
 
+    function showToast(message) {
+        const toastStack = document.querySelector('.toast-stack');
+        if (toastStack) {
+            const toast = document.createElement('div');
+            toast.className = 'toast success';
+            toast.innerHTML = `<i class="ph-fill ph-bell"></i> ${message}`;
+            toastStack.appendChild(toast);
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                setTimeout(() => toast.remove(), 500);
+            }, 8000);
+        } else {
+            // Fallback for pages without toast-stack
+            const div = document.createElement('div');
+            div.style.cssText = 'position:fixed; top:20px; left:50%; transform:translateX(-50%); background:#1d6ff3; color:white; padding:16px 24px; border-radius:12px; z-index:99999; box-shadow:0 10px 30px rgba(0,0,0,0.15); font-weight:600; font-size:14px; animation: slideDown 0.4s ease;';
+            div.innerHTML = `<i class="ph-fill ph-bell" style="margin-right:8px"></i> ${message}`;
+            document.body.appendChild(div);
+            setTimeout(() => {
+                div.style.opacity = '0';
+                div.style.transition = 'opacity 0.5s ease';
+                setTimeout(() => div.remove(), 500);
+            }, 8000);
+        }
+    }
+
+    function tick() {
+        if (!reminderTimeStr) return;
+
+        // Use server-adjusted time for comparison
         const now = new Date();
-        const hours = String(now.getHours()).padStart(2, '0');
-        const minutes = String(now.getMinutes()).padStart(2, '0');
-        const currentTimeStr = `${hours}:${minutes}`;
+        const adjustedNow = new Date(now.getTime() + serverOffset);
+        
+        const currentTimeStr = `${String(adjustedNow.getHours()).padStart(2, '0')}:${String(adjustedNow.getMinutes()).padStart(2, '0')}`;
         
         if (currentTimeStr === reminderTimeStr) {
             triggerReminder();
         }
     }
 
-    // Notification permission is now requested via user gesture in settings or scanner pages.
+    // High precision tick (1s) to catch the exact minute
+    setInterval(tick, 1000);
+    
+    // Background sync (1m) to pick up admin changes and resync time
+    setInterval(syncSettings, 60000);
 
-    // Check every 30 seconds
-    setInterval(checkReminder, 30000);
-    // Also check immediately on load
-    checkReminder();
+    // Prompt for notification permission on first interaction
+    document.addEventListener('click', function requestPerms() {
+        if (window.Notification && Notification.permission === 'default') {
+            Notification.requestPermission();
+        }
+        // Remove listener after first click to avoid overhead
+        document.removeEventListener('click', requestPerms);
+    }, { once: true });
+
+    // Initial check
+    syncSettings();
+    tick();
 })();
 </script>
 {% endif %}

@@ -5,7 +5,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>New User Registration - Admin Portal</title>
+  <title>New User Registration - Admin Dashboard</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
@@ -652,8 +652,8 @@
       <div class="sidebar-brand">
         <div class="brand-icon"><i class="ph-fill ph-shield-check"></i></div>
         <div class="brand-text">
-          <strong>Azure Ethos</strong>
-          <span>Admin Portal</span>
+          <strong>Attendance Portal</strong>
+          <span>Admin Dashboard</span>
         </div>
       </div>
 
@@ -678,10 +678,7 @@
 
       <div class="sidebar-foot">
         <div class="sidebar-user">
-          <div class="user-avatar" style="overflow:hidden;">
-            <!-- Placeholder for admin image -->
-            <img src="https://i.pravatar.cc/100?img=11" alt="Admin" style="width:100%;height:100%;object-fit:cover;">
-          </div>
+          <div class="user-avatar"><i class="ph-bold ph-user"></i></div>
           <div class="user-info">
             <strong>{{ request.session.display_name|default:"System Admin" }}</strong>
             <span>System Admin</span>
@@ -714,7 +711,7 @@
         
         <div class="page-header">
           <h1 class="page-title">New User Registration</h1>
-          <p class="page-subtitle">Securely enroll new users into the Azure Ethos ecosystem. Please ensure basic information is accurate and biometric data follows the orientation guidelines.</p>
+          <p class="page-subtitle">Securely enroll new users into the Attendance Portal ecosystem. Please ensure basic information is accurate and biometric data follows the orientation guidelines.</p>
         </div>
 
         <form method="POST" action="{% url 'admin-enroll-user' %}" enctype="multipart/form-data">
@@ -831,7 +828,7 @@
         </form>
 
         <div class="page-footer">
-          <div>AZURE ETHOS ENROLLMENT PROTOCOL V2.4</div>
+          <div>ATTENDANCE PORTAL ENROLLMENT PROTOCOL V2.4</div>
           <div class="footer-secure">
             <i class="ph-bold ph-lock-key"></i>
             AES-256 ENCRYPTED

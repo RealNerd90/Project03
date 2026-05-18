@@ -10,7 +10,7 @@ import calendar
 from io import BytesIO
 import uuid
 from django.http import HttpRequest, HttpResponse, JsonResponse
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404, reverse
 from django.contrib import messages
 from django.utils import timezone
 from django.utils.text import slugify
@@ -58,8 +58,8 @@ def welcome(request: HttpRequest) -> HttpResponse:
 
 def dashboard(request: HttpRequest) -> HttpResponse:
     """Render the main dashboard using the existing static HTML as a template."""
-    if request.session.get("is_admin"):
-        return redirect("admin-dashboard")
+    # Admins should also be able to view their own attendance/dashboard if they wish.
+    # The previous forced redirect prevented admins from seeing the user-facing side.
 
     today = timezone.localdate()
     display_name = _normalize_display_name(request.session.get("display_name"))
@@ -418,49 +418,103 @@ def admin_user_management(request: HttpRequest) -> HttpResponse:
         return redirect("manual-login")
 
     from django.core.paginator import Paginator
+    from django.utils import timezone
+    from .models import RegisteredUser, AttendanceRecord
     
-    users_list = RegisteredUser.objects.all().order_by("name")
-    total_count = users_list.count()
+    tab = request.GET.get("tab", "all")
     
-    # We will simulate "Active", "Pending Approval", "Archived" based on role or just default to Active
-    # In a real system, there should be a status field in RegisteredUser
-    active_count = users_list.filter(account_role__in=["employee", "student", "teacher"]).count()
-    if active_count == 0:
-        active_count = total_count
+    # Counts
+    all_users_qs = RegisteredUser.objects.filter(is_deleted=False)
+    total_count = all_users_qs.count()
+    
+    # Active (Online) = checked in today and haven't checked out yet
+    today = timezone.localdate()
+    active_now_names = AttendanceRecord.objects.filter(
+        date=today, 
+        check_out_time__isnull=True
+    ).values_list("name", flat=True).distinct()
+    
+    active_count = all_users_qs.filter(name__in=active_now_names).count()
+    deleted_count = RegisteredUser.objects.filter(is_deleted=True).count()
+
+    # Filtering based on tab
+    if tab == "active":
+        users_list = all_users_qs.filter(name__in=active_now_names).order_by("name")
+    elif tab == "deleted":
+        users_list = RegisteredUser.objects.filter(is_deleted=True).order_by("name")
+    else: # all
+        users_list = all_users_qs.order_by("name")
         
     paginator = Paginator(users_list, 10) # Show 10 users per page
     page_number = request.GET.get("page", 1)
     page_obj = paginator.get_page(page_number)
 
-    # Enhance users with avatar URLs
+    # Enhance users with avatar URLs and status logic
+    role_map = {
+        "student": "Student",
+        "employee": "Employee",
+        "teacher": "Teacher",
+    }
+    
     enriched_users = []
     for u in page_obj:
         photo_url = _profile_photo_url_for(u.name)
-        # Mock ID formatting
         formatted_id = f"#ST-{82900 + u.id}" if u.id else "#ST-00000"
         
-        # Mocking status logic:
-        # If created in the last 2 days without a password, maybe pending. Otherwise active.
-        # But we'll just simplify to Active for now, and rely on Django templating for badge formatting.
-        status_label = "Active"
-        status_class = "bg-green-100 text-green-700" 
+        # Get last activity
+        last_rec = AttendanceRecord.objects.filter(name=u.name).order_by("-date", "-time").first()
+        if last_rec:
+            last_activity = f"{last_rec.date.strftime('%b %d')} at {last_rec.time.strftime('%I:%M %p')}"
+        else:
+            last_activity = "No activity"
+            
+        role_label = role_map.get(u.account_role, u.account_role.capitalize() if u.account_role else "User")
         
         enriched_users.append({
             "model": u,
             "photo_url": photo_url,
             "formatted_id": formatted_id,
-            "status_label": status_label,
-            "status_class": status_class,
+            "role_label": role_label,
+            "last_activity": last_activity,
+            "is_online": u.name in active_now_names,
         })
 
     context = {
         "active_page": "user-management",
+        "current_tab": tab,
         "total_count": f"{total_count:,}",
         "active_count": f"{active_count:,}",
+        "deleted_count": f"{deleted_count:,}",
         "page_obj": page_obj,
         "users": enriched_users,
     }
     return render(request, "admin_user_management.html", context)
+
+
+def admin_delete_user(request: HttpRequest, user_id: int) -> HttpResponse:
+    """Soft delete a user."""
+    if not request.session.get("is_admin"):
+        return redirect("manual-login")
+    
+    from .models import RegisteredUser
+    user = get_object_or_404(RegisteredUser, id=user_id)
+    user.is_deleted = True
+    user.save()
+    messages.success(request, f"User {user.name} has been moved to Deleted.")
+    return redirect(f"{reverse('admin-user-management')}?tab=deleted")
+
+
+def admin_restore_user(request: HttpRequest, user_id: int) -> HttpResponse:
+    """Restore a soft-deleted user."""
+    if not request.session.get("is_admin"):
+        return redirect("manual-login")
+    
+    from .models import RegisteredUser
+    user = get_object_or_404(RegisteredUser, id=user_id)
+    user.is_deleted = False
+    user.save()
+    messages.success(request, f"User {user.name} has been restored successfully.")
+    return redirect(f"{reverse('admin-user-management')}?tab=all")
 
 
 def admin_enroll_user(request: HttpRequest) -> HttpResponse:
@@ -1252,7 +1306,7 @@ def manual_login(request: HttpRequest) -> HttpResponse:
             request.session["display_name"] = "Admin"
             return redirect("admin-dashboard")
 
-        user = RegisteredUser.objects.filter(email__iexact=email).first()
+        user = RegisteredUser.objects.filter(email__iexact=email, is_deleted=False).first()
         if not user:
             locked = record_failed_attempt()
             error_msg = "Maximum login attempts exceeded. Please try again after 5 minutes." if locked else "No account found for that email."
@@ -1424,6 +1478,11 @@ def signin_scan(request: HttpRequest) -> HttpResponse:
             ts = result.get("timestamp") or datetime.now().isoformat()
             # Persist name for dashboard greeting (no full auth yet).
             display_name = _normalize_display_name(result.get("name"))
+            
+            # Prevent deleted users from signing in
+            if RegisteredUser.objects.filter(name=display_name, is_deleted=True).exists():
+                return JsonResponse({"success": False, "message": "Account has been disabled."}, status=403)
+
             request.session["display_name"] = display_name
             request.session.pop("is_admin", None)
             return JsonResponse({
@@ -1840,12 +1899,17 @@ def create_attendance_record(request: HttpRequest) -> JsonResponse:
 
 def api_settings(request: HttpRequest) -> JsonResponse:
     from .models import SystemSetting
+    from django.utils import timezone
     setting = SystemSetting.objects.first()
     if not setting:
         return JsonResponse({'reminder_time': '', 'enable_reminder_sound': False})
+    
+    now = timezone.localtime(timezone.now())
     return JsonResponse({
         'reminder_time': setting.reminder_time.strftime('%H:%M') if setting.reminder_time else '',
-        'enable_reminder_sound': setting.enable_reminder_sound
+        'enable_reminder_sound': setting.enable_reminder_sound,
+        'server_time': now.strftime('%H:%M:%S'),
+        'server_date': now.strftime('%Y-%m-%d')
     })
 
 

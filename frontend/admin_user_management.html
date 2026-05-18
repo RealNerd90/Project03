@@ -5,7 +5,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>User Management - Admin Portal</title>
+  <title>User Management - Admin Dashboard</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
@@ -302,6 +302,7 @@
       color: var(--text-sub);
       cursor: pointer;
       position: relative;
+      text-decoration: none;
     }
     .tab.active {
       color: var(--blue);
@@ -403,6 +404,11 @@
     .badge-pending {
       background: #fef3c7;
       color: #92400e;
+    }
+    .badge-role {
+      background: #eff6ff;
+      color: #1d4ed8;
+      border: 1px solid #dbeafe;
     }
 
     .action-btns {
@@ -560,10 +566,9 @@
 
         <div class="table-card">
           <div class="tabs">
-            <div class="tab active">All Users ({{ total_count }})</div>
-            <div class="tab">Active</div>
-            <div class="tab">Pending Approval</div>
-            <div class="tab">Archived</div>
+            <a href="?tab=all" class="tab {% if current_tab == 'all' or not current_tab %}active{% endif %}">All Users ({{ total_count }})</a>
+            <a href="?tab=active" class="tab {% if current_tab == 'active' %}active{% endif %}">Active (Online) ({{ active_count }})</a>
+            <a href="?tab=deleted" class="tab {% if current_tab == 'deleted' %}active{% endif %}">Deleted ({{ deleted_count }})</a>
           </div>
 
           <div class="table-responsive">
@@ -572,8 +577,8 @@
                 <tr>
                   <th>USER NAME</th>
                   <th>EMAIL ADDRESS</th>
-                  <th>REGISTRATION DATE</th>
-                  <th>STATUS</th>
+                  <th>ACCOUNT ROLE</th>
+                  <th>LAST ACTIVITY</th>
                   <th>ACTIONS</th>
                 </tr>
               </thead>
@@ -594,14 +599,23 @@
                     </div>
                   </td>
                   <td class="text-sm">{{ u.model.email|default:"Not Provided" }}</td>
-                  <td class="text-sm">{{ u.model.created_at|date:"M d, Y" }}</td>
                   <td>
-                    <span class="badge {{ u.status_class }}">{{ u.status_label }}</span>
+                    <span class="badge badge-role">{{ u.role_label }}</span>
+                  </td>
+                  <td class="text-sm">
+                    <div style="display: flex; align-items: center; gap: 6px;">
+                      <i class="ph-bold ph-clock-counter-clockwise" style="color: #94a3b8;"></i>
+                      {{ u.last_activity }}
+                    </div>
                   </td>
                   <td>
                     <div class="action-btns">
-                      <button class="action-btn" title="Edit User"><i class="ph-bold ph-pencil-simple"></i></button>
-                      <button class="action-btn" title="Delete User"><i class="ph-bold ph-trash"></i></button>
+                      {% if current_tab == 'deleted' %}
+                        <a href="{% url 'admin-restore-user' u.model.id %}" class="action-btn" title="Restore User" style="color: var(--blue);"><i class="ph-bold ph-arrow-counter-clockwise"></i></a>
+                      {% else %}
+                        <button class="action-btn" title="Edit User"><i class="ph-bold ph-pencil-simple"></i></button>
+                        <a href="{% url 'admin-delete-user' u.model.id %}" class="action-btn" title="Delete User" onclick="return confirm('Are you sure you want to delete this user?')"><i class="ph-bold ph-trash"></i></a>
+                      {% endif %}
                     </div>
                   </td>
                 </tr>

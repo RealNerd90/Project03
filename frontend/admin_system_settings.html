@@ -489,9 +489,11 @@
       display: flex;
       flex-direction: column;
       align-items: center;
+      justify-content: center;
       gap: 16px;
       transition: border-color 0.2s, background 0.2s;
       cursor: pointer;
+      height: 380px;
     }
     .upload-box:hover {
       border-color: var(--blue);
@@ -517,6 +519,24 @@
       display: flex;
       flex-direction: column;
       gap: 12px;
+      max-height: 380px;
+      overflow-y: auto;
+      padding-right: 8px;
+    }
+
+    .sounds-list::-webkit-scrollbar {
+      width: 6px;
+    }
+    .sounds-list::-webkit-scrollbar-track {
+      background: #f1f5f9;
+      border-radius: 10px;
+    }
+    .sounds-list::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 10px;
+    }
+    .sounds-list::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
     }
 
     .sound-item {
@@ -839,7 +859,8 @@
             </div>
             
             <div class="sound-library-grid">
-              <div class="upload-box">
+              <div class="upload-box" onclick="document.getElementById('sound-upload').click()">
+                <input type="file" id="sound-upload" style="display:none" accept=".mp3,.wav">
                 <div class="upload-icon">
                   <i class="ph-bold ph-file-audio"></i>
                 </div>
@@ -852,66 +873,32 @@
               <div class="sounds-list">
                 <label class="form-label" style="margin-bottom: 12px; display: block;">Active Reminder Sounds</label>
                 
-                <div class="sound-item">
-                  <div class="sound-item-icon">
-                    <i class="ph-bold ph-check"></i>
+                {% for sound in sounds %}
+                <div class="sound-item" id="sound-item-{{ sound.id }}">
+                  <div class="sound-item-icon {% if 'error' in sound.name|lower or 'alert' in sound.name|lower %}error{% endif %}">
+                    {% if 'error' in sound.name|lower or 'alert' in sound.name|lower %}
+                      <i class="ph-bold ph-warning-circle"></i>
+                    {% else %}
+                      <i class="ph-bold ph-music-note"></i>
+                    {% endif %}
                   </div>
                   <div class="sound-item-info">
-                    <strong>Successful Check-in</strong>
-                    <span>chime-success.mp3</span>
+                    <strong>{{ sound.name }}</strong>
+                    <span>{{ sound.file.name }}</span>
                   </div>
                   <div class="sound-actions">
-                    <button type="button" class="sound-btn"><i class="ph-bold ph-play-circle"></i></button>
-                    <button type="button" class="sound-btn"><i class="ph-bold ph-trash"></i></button>
+                    <button type="button" class="sound-btn" onclick="playPreview('{{ sound.file.url }}')"><i class="ph-bold ph-play-circle"></i></button>
+                    <button type="button" class="sound-btn" onclick="deleteSound({{ sound.id }})"><i class="ph-bold ph-trash"></i></button>
                   </div>
                 </div>
-
-                <div class="sound-item">
-                  <div class="sound-item-icon error">
-                    <i class="ph-bold ph-warning-circle"></i>
-                  </div>
-                  <div class="sound-item-info">
-                    <strong>Error/Alert</strong>
-                    <span>alert-error.wav</span>
-                  </div>
-                  <div class="sound-actions">
-                    <button type="button" class="sound-btn"><i class="ph-bold ph-play-circle"></i></button>
-                    <button type="button" class="sound-btn"><i class="ph-bold ph-trash"></i></button>
-                  </div>
-                </div>
+                {% empty %}
+                <p class="note" style="text-align: center; padding: 20px;">No custom sounds uploaded yet.</p>
+                {% endfor %}
               </div>
             </div>
           </section>
 
-          <!-- System Event Sounds -->
-          <section class="settings-section">
-            <div class="section-title">
-              <i class="ph-bold ph-speaker-high"></i>
-              System Event Sounds
-            </div>
-            
-            <div class="event-sound-item">
-              <div class="event-info">
-                <strong>Attendance Confirmation</strong>
-                <span>Play sound when a user successfully checks in/out</span>
-              </div>
-              <label class="switch">
-                <input type="checkbox" name="sound_confirmation" checked>
-                <span class="slider"></span>
-              </label>
-            </div>
 
-            <div class="event-sound-item">
-              <div class="event-info">
-                <strong>Error Notifications</strong>
-                <span>Audible alert for geofencing or biometric failures</span>
-              </div>
-              <label class="switch">
-                <input type="checkbox" name="sound_error" checked>
-                <span class="slider"></span>
-              </label>
-            </div>
-          </section>
 
           <!-- Form Footer -->
           <div class="form-footer">
@@ -932,6 +919,53 @@
         setTimeout(function () { t.remove(); }, 400);
       });
     }, 4000);
+
+    // Sound Library Functions
+    function playPreview(url) {
+      const audio = new Audio(url);
+      audio.play().catch(e => console.error('Playback failed:', e));
+    }
+
+    async function deleteSound(id) {
+      if (!confirm('Are you sure you want to delete this reminder sound?')) return;
+      try {
+        const response = await fetch(`/api/settings/sound/${id}/delete/`, {
+          method: 'POST',
+          headers: { 'X-CSRFToken': '{{ csrf_token }}' }
+        });
+        if (response.ok) {
+          document.getElementById(`sound-item-${id}`).remove();
+        } else {
+          alert('Failed to delete sound.');
+        }
+      } catch (e) {
+        console.error('Delete error:', e);
+      }
+    }
+
+    document.getElementById('sound-upload').addEventListener('change', async function(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const formData = new FormData();
+      formData.append('sound_upload', file);
+
+      try {
+        const response = await fetch('/api/settings/sound/upload/', {
+          method: 'POST',
+          headers: { 'X-CSRFToken': '{{ csrf_token }}' },
+          body: formData
+        });
+        const data = await response.json();
+        if (data.success) {
+          location.reload(); // Simplest way to update the list
+        } else {
+          alert(data.error || 'Upload failed');
+        }
+      } catch (e) {
+        console.error('Upload error:', e);
+      }
+    });
   </script>
 </body>
 </html>

@@ -12,6 +12,7 @@ class RegisteredUser(models.Model):
     dob_display = models.CharField(max_length=64, blank=True, default="")
     gender = models.CharField(max_length=16, blank=True, default="")
     account_role = models.CharField(max_length=16, blank=True, default="employee")
+    is_deleted = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

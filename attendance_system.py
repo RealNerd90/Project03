@@ -40,7 +40,7 @@ async def _load_location_config():
         # Avoid circular import or early boot issues
         from attendance.models import GeofenceSetting # type: ignore
         from asgiref.sync import sync_to_async
-        setting = await sync_to_async(GeofenceSetting.objects.first)()
+        setting = await sync_to_async(GeofenceSetting.objects.first)()  # type: ignore
         if setting:
             cfg["center_lat"] = setting.latitude
             cfg["center_lon"] = setting.longitude
@@ -63,7 +63,7 @@ async def _load_location_config():
                     if "center_lon" in json_cfg:
                         cfg["center_lon"] = float(json_cfg["center_lon"])
                     if "radius_meters" in json_cfg:
-                        cfg["radius_meters"] = float(max(10.0, float(json_cfg["radius_meters"])))
+                        cfg["radius_meters"] = max(10.0, float(json_cfg["radius_meters"]))
         except Exception:
             pass
     
@@ -346,7 +346,7 @@ class AttendanceSystem:
                         post_process=True,
                         device=self.device
                     )
-                    boxes, _ = mtcnn_lenient.detect(img)
+                    boxes, _ = mtcnn_lenient.detect(img)  # type: ignore
                     pass_2_attempt = True
                     del mtcnn_lenient
 
@@ -502,7 +502,7 @@ class AttendanceSystem:
         except Exception:
             pass
         try:
-            cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*'MJPG'))
+            cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*'MJPG'))  # type: ignore
         except Exception:
             pass
         cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
@@ -646,7 +646,7 @@ class AttendanceSystem:
                         _safe_crop_and_save(frame, box, save_path)
                         captured[target_key] = save_path
                         print(f"✅ Captured {str(target_key).upper()} -> {save_path}") # type: ignore
-                        current_idx = int(current_idx) + 1
+                        current_idx = current_idx + 1
                         stable_count = 0
                         last_pose = None
 
@@ -870,7 +870,7 @@ class AttendanceSystem:
 
             # Crop the face and compute embedding
             x1, y1, x2, y2 = [int(cast(Any, b)) for b in cast(Any, largest_box)] # type: ignore
-            face = img.crop((x1, y1, x2, y2)).resize((160, 160), Image.BILINEAR)
+            face = img.crop((x1, y1, x2, y2)).resize((160, 160), Image.Resampling.BILINEAR)
             face_arr = np.array(face).astype(np.float32)
             face_arr = (face_arr - 127.5) / 128.0
             face_tensor = torch.tensor(face_arr).permute(2, 0, 1).unsqueeze(0)
@@ -882,7 +882,7 @@ class AttendanceSystem:
                 return {
                     "recognized": False,
                     "name": None,
-                    "distance": float(min_dist),
+                    "distance": min_dist,
                     "box": [x1, y1, x2, y2],
                     "message": "Unknown face.",
                     "attendance_marked": False,
@@ -899,7 +899,7 @@ class AttendanceSystem:
             return {
                 "recognized": True,
                 "name": best_match_name,
-                "distance": float(min_dist),
+                "distance": min_dist,
                 "box": [x1, y1, x2, y2],
                 "message": "Face recognized.",
                 "attendance_marked": attendance_marked,
@@ -1010,7 +1010,7 @@ class AttendanceSystem:
                         face_img = pil_img.crop((x1_s, y1_s, x2_s, y2_s))
                         
                         # Resize & Normalize
-                        face_img = face_img.resize((160, 160), Image.BILINEAR)
+                        face_img = face_img.resize((160, 160), Image.Resampling.BILINEAR)
                         face_arr = np.array(face_img).astype(np.float32)
                         face_arr = (face_arr - 127.5) / 128.0
                         face_tensor = torch.tensor(face_arr).permute(2, 0, 1).unsqueeze(0)
@@ -1055,7 +1055,7 @@ class AttendanceSystem:
 
             # --- Drawing UI ---
             for (box), name in zip(face_locations, face_names):
-                x1, y1, x2, y2 = [int(b) for b in box]
+                x1, y1, x2, y2 = box
                 
                 color = (0, 0, 255) # Default Red
                 
@@ -1134,7 +1134,7 @@ class AttendanceSystem:
             print(f"📝 Attendance recorded for {name} at {time_str} (Local Time) at ({lat}, {lon})")
 
         try:
-            AttendanceRecord.objects.create(
+            AttendanceRecord.objects.create(  # type: ignore
                 name=name,
                 date=timestamp.date(),
                 time=time_value,
